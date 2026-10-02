@@ -15,10 +15,23 @@ const FAQ = [
 const wrap = (s) => ({ get: (k) => { try { return s().getItem(k); } catch { return null; } }, set: (k, v) => { try { s().setItem(k, v); } catch {} } });
 const store = wrap(() => localStorage), sess = wrap(() => sessionStorage);
 
+function Count({ to }) {
+  const r = useRef();
+  useEffect(() => { const t0 = performance.now(); let f; const step = (t) => { const k = Math.min((t - t0) / 1400, 1); if (r.current) r.current.textContent = Math.round(to * (1 - (1 - k) ** 3)).toLocaleString("en-US"); if (k < 1) f = requestAnimationFrame(step); }; f = requestAnimationFrame(step); return () => cancelAnimationFrame(f); }, [to]);
+  return <span ref={r}>{to.toLocaleString("en-US")}</span>;
+}
+function fly(el) {
+  const cb = document.querySelector(".cart");
+  if (!el || !cb || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const a = el.getBoundingClientRect(), b = cb.getBoundingClientRect(), d = document.createElement("i");
+  d.className = "fly"; d.style.cssText = `left:${a.left + a.width / 2}px;top:${a.top + a.height / 2}px`; document.body.appendChild(d);
+  const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2;
+  d.animate([{ transform: "translate(-50%,-50%) scale(1)", opacity: 1 }, { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.3)`, opacity: 0.4 }], { duration: 650, easing: "cubic-bezier(.5,0,.8,.5)" }).onfinish = () => d.remove();
+}
 function Card({ p, i, fmt, inCart, add }) {
   return (<li className="card" style={{ "--n": i % 8 }}><div className="top"><div className="icon" aria-hidden="true">{p.name[0]}</div><span className="tag">{p.category}{p.realm !== "all" && ` / ${p.realm}`}</span></div>
     <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
-    <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={() => add(p)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
+    <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
 }
 
 export default function Store({ products, patrons, email, hire }) {
@@ -52,12 +65,13 @@ export default function Store({ products, patrons, email, hire }) {
     const calm = matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator.deviceMemory && navigator.deviceMemory < 4);
     const bar = document.querySelector(".progress"), blocks = document.querySelector(".blocks");
     let last = scrollY, v = 0, raf = 0;
-    const targets = () => document.querySelectorAll(".grid,.realms");
-    const clear = () => targets().forEach((e) => { e.style.filter = ""; e.style.transform = ""; });
+    const fe = document.getElementById("mbf"), targets = () => document.querySelectorAll(".grid,.realms");
+    let live = false;
+    const clear = () => { if (live) { targets().forEach((e) => { e.style.filter = ""; }); live = false; } };
     const loop = () => {
-      raf = 0; v *= 0.86; const b = Math.min(Math.abs(v) * 0.04, 1.5);
-      if (b < 0.25) { clear(); if (Math.abs(v) < 1) return; }
-      else { const f = `blur(${b.toFixed(2)}px)`, t = `skewY(${Math.max(-1, Math.min(1, v * 0.015)).toFixed(2)}deg)`; targets().forEach((e) => { e.style.filter = f; e.style.transform = t; }); }
+      raf = 0; v *= 0.88; const b = Math.min(Math.abs(v) * 0.03, 1.6);
+      if (b < 0.3) { clear(); if (Math.abs(v) < 1) return; }
+      else { fe?.setAttribute("stdDeviation", `0 ${b.toFixed(2)}`); if (!live) { targets().forEach((e) => { e.style.filter = "url(#mb)"; }); live = true; } }
       raf = requestAnimationFrame(loop);
     };
     const on = () => {
@@ -71,14 +85,20 @@ export default function Store({ products, patrons, email, hire }) {
     return () => { removeEventListener("scroll", on); cancelAnimationFrame(raf); clear(); };
   }, []);
   useEffect(() => {
+    if (!matchMedia("(hover:hover)").matches) return;
+    const m = (e) => { const c = e.target.closest?.(".card"); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty("--mx", e.clientX - r.left + "px"); c.style.setProperty("--my", e.clientY - r.top + "px"); };
+    document.addEventListener("pointermove", m, { passive: true }); return () => document.removeEventListener("pointermove", m);
+  }, []);
+  useEffect(() => {
     const els = [...document.querySelectorAll("main > section:not(.hero)")];
     els.forEach((e) => e.classList.add("rv"));
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 });
     els.forEach((e) => io.observe(e)); return () => io.disconnect();
   }, []);
+  useEffect(() => { document.body.style.overflow = menu ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [menu]);
   const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); store.set("theme", t); document.documentElement.dataset.theme = t; };
   const saveIgn = () => { const v = ignVal.trim(); if (!RULES[platform].test(v)) return setErr(platform === "java" ? "Java names: 3 to 16 letters, numbers or underscores." : "Bedrock names: 3 to 16 letters, numbers, spaces or underscores."); store.set("ign", v); store.set("platform", platform); sess.set("ignSeen", "1"); setIgn(v); setIgnOpen(false); setErr(""); toast(`Welcome, ${v}!`); };
-  const add = (p) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); setCart([...cart, p.id]); toast(`${p.name} added to cart`); };
+  const add = (p, el) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); setCart([...cart, p.id]); fly(el); toast(`${p.name} added to cart`); };
   const items = cart.map((id) => products.find((p) => p.id === id)).filter(Boolean), total = items.reduce((a, p) => a + p.price, 0);
   const openCheckout = () => { if (!ign) return setIgnOpen(true); setCartOpen(false); setConfirm(""); setCErr(""); setStep("check"); };
   const place = () => {
@@ -95,7 +115,7 @@ export default function Store({ products, patrons, email, hire }) {
     <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
     <button className="ghost" onClick={() => setAuth("login")}>Login</button></>);
   return (<>
-    <div className="progress" aria-hidden="true" /><div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
+    <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" /><svg width="0" height="0" aria-hidden="true" style={{ position: "absolute" }}><filter id="mb" x="0" y="-10%" width="100%" height="120%"><feGaussianBlur id="mbf" stdDeviation="0 0" /></filter></svg><div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
     <header className="head"><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
       <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}><a href="#realms">Realms</a><a href="#store">Store</a><a href="#patrons">Patrons</a><a href="#about">About</a><a href="#faq">FAQ</a><div className="mt">{ctl}</div></nav>
@@ -108,7 +128,7 @@ export default function Store({ products, patrons, email, hire }) {
         <p className="lead">Four realms, one account. Pick a realm, grab ranks, crates and gems.</p>
         <div className="row"><a className="btn" href="#store">Start shopping</a>
           <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net</button></div>
-        <dl className="stats"><div><dt>Realms</dt><dd>4</dd></div><div><dt>Items</dt><dd>{products.length}</dd></div><div><dt className="live">Online (fake)</dt><dd>1,284</dd></div></dl></div></section>
+        <dl className="stats"><div><dt>Realms</dt><dd><Count to={4} /></dd></div><div><dt>Items</dt><dd><Count to={products.length} /></dd></div><div><dt className="live">Online (fake)</dt><dd><Count to={1284} /></dd></div></dl></div></section>
 
       <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Gems", "PixelFox joined Supporter+", "Nova_77 grabbed Warrior"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
 
@@ -124,6 +144,8 @@ export default function Store({ products, patrons, email, hire }) {
         <div className="filters" role="group" aria-label="Categories">{["All", ...CATS].map((c) => <button key={c} aria-pressed={cat === c} className="chip" onClick={() => setCat(c)}>{c}</button>)}
           <input ref={searchRef} type="search" aria-label="Search products (press /)" placeholder="Search ( / )" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         {list.length ? <ul className="grid">{list.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setRealm("all"); setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
+
+      <div className="bigtype" aria-hidden="true"><div>{[0, 1].map((k) => ["Ranks", "Crates", "Gems", "Subscriptions", "Grades"].map((t) => <span key={k + t}>{t}</span>))}</div></div>
 
       <section id="about" className="wrap prose"><h2>About us</h2><p>We are a small community running Bedrock and Java realms. This store is a demo build: names, prices and perks are placeholders.</p></section>
       <section id="faq" className="wrap prose"><h2>FAQ</h2>{FAQ.map(([a, b]) => <details key={a}><summary>{a}</summary><div><p>{b}</p></div></details>)}</section>

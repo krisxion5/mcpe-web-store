@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react";
 // Soft procedural lofi: generated in the browser, no audio files, very quiet.
 const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 64]];
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-const BEAT = 60 / 72, VOL = 0.5;
+const BEAT = 60 / 72, VOL = 0.85;
 function engine() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const master = ctx.createGain(); master.gain.value = 0;
   const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700;
-  master.connect(lp).connect(ctx.destination);
+  const comp = ctx.createDynamicsCompressor(); // keeps louder playback from clipping
+  master.connect(lp).connect(comp).connect(ctx.destination);
   const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = nb.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const noise = (t, dur, g, f) => { const s = ctx.createBufferSource(), h = ctx.createBiquadFilter(), e = ctx.createGain(); s.buffer = nb; h.type = "highpass"; h.frequency.value = f; e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.0001, t + dur); s.connect(h).connect(e).connect(master); s.start(t); s.stop(t + dur); };
