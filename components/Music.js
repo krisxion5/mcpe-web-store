@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 // Soft procedural lofi: generated in the browser, no audio files, very quiet.
 const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 64]];
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-const BEAT = 60 / 72, VOL = 0.3;
+const BEAT = 60 / 72, VOL = 0.5;
 function engine() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const master = ctx.createGain(); master.gain.value = 0;

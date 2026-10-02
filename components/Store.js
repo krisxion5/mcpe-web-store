@@ -48,6 +48,29 @@ export default function Store({ products, patrons, email, hire }) {
   }, []);
 
   useEffect(() => {
+    // Scroll effects: progress bar, hero parallax, and a light velocity blur (skipped on reduced-motion / low-memory devices).
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches || (navigator.deviceMemory && navigator.deviceMemory < 4);
+    const bar = document.querySelector(".progress"), blocks = document.querySelector(".blocks");
+    let last = scrollY, v = 0, raf = 0;
+    const targets = () => document.querySelectorAll(".grid,.realms");
+    const clear = () => targets().forEach((e) => { e.style.filter = ""; e.style.transform = ""; });
+    const loop = () => {
+      raf = 0; v *= 0.86; const b = Math.min(Math.abs(v) * 0.04, 1.5);
+      if (b < 0.25) { clear(); if (Math.abs(v) < 1) return; }
+      else { const f = `blur(${b.toFixed(2)}px)`, t = `skewY(${Math.max(-1, Math.min(1, v * 0.015)).toFixed(2)}deg)`; targets().forEach((e) => { e.style.filter = f; e.style.transform = t; }); }
+      raf = requestAnimationFrame(loop);
+    };
+    const on = () => {
+      const y = scrollY, h = document.documentElement.scrollHeight - innerHeight;
+      if (bar) bar.style.transform = `scaleX(${h > 0 ? y / h : 0})`;
+      if (blocks && y < 900) blocks.style.transform = `translate3d(0,${y * 0.2}px,0)`;
+      if (calm) { last = y; return; }
+      v = y - last; last = y; if (!raf) raf = requestAnimationFrame(loop);
+    };
+    addEventListener("scroll", on, { passive: true });
+    return () => { removeEventListener("scroll", on); cancelAnimationFrame(raf); clear(); };
+  }, []);
+  useEffect(() => {
     const els = [...document.querySelectorAll("main > section:not(.hero)")];
     els.forEach((e) => e.classList.add("rv"));
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 });
@@ -67,24 +90,25 @@ export default function Store({ products, patrons, email, hire }) {
   const featured = products.filter((p) => p.badge === "Popular").slice(0, 3);
   const count = (r) => products.filter((p) => p.realm === r).length;
 
+  const ctl = (<><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur", e.target.value); }}>{Object.keys(RATES).map((c) => <option key={c}>{c}</option>)}</select>
+    <button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
+    <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
+    <button className="ghost" onClick={() => setAuth("login")}>Login</button></>);
   return (<>
-    <div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
+    <div className="progress" aria-hidden="true" /><div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
     <header className="head"><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
-      <nav className={menu ? "open" : ""} aria-label="Main" onClick={() => setMenu(false)}><a href="#realms">Realms</a><a href="#store">Store</a><a href="#patrons">Patrons</a><a href="#about">About</a><a href="#faq">FAQ</a></nav>
-      <div className="tools"><Music /><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur", e.target.value); }}>{Object.keys(RATES).map((c) => <option key={c}>{c}</option>)}</select>
-        <button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
-        <button className="ghost" onClick={() => setCartOpen(true)}>Cart ({cart.length})</button>
-        <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
-        <button className="ghost hide-s" onClick={() => setAuth("login")}>Login</button>
-        <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>Menu</button></div></div></header>
+      <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}><a href="#realms">Realms</a><a href="#store">Store</a><a href="#patrons">Patrons</a><a href="#about">About</a><a href="#faq">FAQ</a><div className="mt">{ctl}</div></nav>
+      <div className="tools"><Music /><div className="dt">{ctl}</div>
+        <button className="ghost cart" aria-label={`Cart, ${cart.length} items`} onClick={() => setCartOpen(true)}>Cart<i key={cart.length}>{cart.length}</i></button>
+        <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
 
     <main id="main">
       <section className="hero"><div className="blocks" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} />)}</div><div className="wrap"><p className="kicker">Official demo store</p><h1>Support the server.<br />Get your <em>rank</em>.</h1>
         <p className="lead">Four realms, one account. Pick a realm, grab ranks, crates and gems.</p>
         <div className="row"><a className="btn" href="#store">Start shopping</a>
           <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net</button></div>
-        <dl className="stats"><div><dt>Realms</dt><dd>4</dd></div><div><dt>Items</dt><dd>{products.length}</dd></div><div><dt>Online (fake)</dt><dd>1,284</dd></div></dl></div></section>
+        <dl className="stats"><div><dt>Realms</dt><dd>4</dd></div><div><dt>Items</dt><dd>{products.length}</dd></div><div><dt className="live">Online (fake)</dt><dd>1,284</dd></div></dl></div></section>
 
       <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Gems", "PixelFox joined Supporter+", "Nova_77 grabbed Warrior"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
 
