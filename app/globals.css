@@ -53,3 +53,31 @@ select{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(
 .demo h2{color:var(--pink)}.foot{border-top:1px solid var(--line);margin-top:3rem;padding:0}.cols{display:grid;grid-template-columns:2fr 1fr 1fr;gap:2rem}.cols a{display:block;color:var(--mut);text-decoration:none;margin:.3rem 0}.cols a:hover{color:var(--pink)}.cols h3{font:600 .8rem sans-serif;text-transform:uppercase;letter-spacing:.12em}
 .copy{border-top:1px solid var(--line);padding-top:1.2rem;margin:2rem 0 0;font-size:.85rem}
 @media(max-width:720px){.realms{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.stats{gap:1.5rem}.hide-s{display:none}.tools{flex-wrap:wrap;justify-content:flex-end}.hero .wrap{padding-block:3rem}}
+/* ---- v3: polish + motion (transform/opacity only) ---- */
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0) rotate(var(--r))}50%{transform:translate3d(0,-16px,0) rotate(var(--r))}}
+@keyframes scroll{to{transform:translateX(-50%)}}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.98)}}
+@keyframes slide{from{opacity:0;transform:translateX(30px)}}
+@keyframes fade{from{opacity:0}}
+.hero .wrap{padding-block:7rem 5rem}h1{font-size:clamp(2.8rem,9vw,6.5rem)}
+.hero .wrap>*{animation:rise .8s cubic-bezier(.2,.7,.2,1) both}
+.hero .wrap>:nth-child(2){animation-delay:.08s}.hero .wrap>:nth-child(3){animation-delay:.16s}.hero .wrap>:nth-child(4){animation-delay:.24s}.hero .wrap>:nth-child(5){animation-delay:.32s}
+.blocks{position:absolute;right:6%;top:14%;width:280px;height:300px;z-index:1;pointer-events:none}
+.blocks i{position:absolute;width:56px;height:56px;border:2px solid var(--pink);animation:drift 7s ease-in-out infinite}
+.blocks i:nth-child(1){left:10px;top:70px;--r:8deg}.blocks i:nth-child(2){left:110px;top:0;--r:-6deg;background:var(--pink);animation-delay:-2s}
+.blocks i:nth-child(3){left:200px;top:90px;--r:12deg;animation-delay:-4s}.blocks i:nth-child(4){left:70px;top:170px;--r:-10deg;background:var(--pink);opacity:.5;animation-delay:-1s}
+.blocks i:nth-child(5){left:180px;top:220px;--r:4deg;width:36px;height:36px;animation-delay:-3s}.blocks i:nth-child(6){left:0;top:250px;--r:-4deg;width:30px;height:30px;background:var(--fg);opacity:.15;animation-delay:-5s}
+.ticker{overflow:hidden;border-bottom:1px solid var(--line);background:var(--card)}
+.ticker div{display:flex;width:max-content;animation:scroll 45s linear infinite}.ticker:hover div{animation-play-state:paused}
+.ticker span{padding:.75rem 2rem;color:var(--mut);font-size:.85rem;white-space:nowrap}.ticker b{color:var(--pink);margin-right:.5rem;font-size:.6rem}
+.wrap>h2{display:flex;align-items:center;gap:.7rem;font-size:2rem}.wrap>h2::before{content:"";width:.8rem;height:.8rem;background:var(--pink);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.rv{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s cubic-bezier(.2,.7,.2,1)}.rv.in{opacity:1;transform:none}
+.card{padding:1.6rem;animation:rise .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--n,0)*45ms);transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+.card:hover{transform:translateY(-4px);z-index:1}.card .icon{width:54px;height:54px;font-size:1.3rem}.buy b{font:700 1.5rem Georgia,serif}.badge{border-radius:99px;padding:.15rem .6rem}
+.btn{transition:transform .15s,box-shadow .15s}.btn:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:3px 3px 0 var(--fg)}.btn:active{transform:none;box-shadow:none}
+.realm{transition:transform .25s cubic-bezier(.2,.7,.2,1),background .2s}.realm:hover{transform:translateY(-3px)}
+.scrim{animation:fade .2s}.modal{animation:pop .3s cubic-bezier(.2,.7,.2,1)}.drawer{animation:slide .3s cubic-bezier(.2,.7,.2,1)}
+.hero h1{margin-bottom:.4em}.lead{font-size:1.25rem}.stats dd{font-size:2.4rem}
+@media(max-width:720px){.blocks{opacity:.3;right:-40px;top:8%}.hero .wrap{padding-block:4rem 3rem}.wrap>h2{font-size:1.6rem}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none}.ticker div{animation:none}}

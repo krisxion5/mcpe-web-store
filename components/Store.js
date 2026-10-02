@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Music from "./Music";
 const RULES = { java: /^\w{3,16}$/, bedrock: /^[A-Za-z0-9_ ]{3,16}$/ };
 const CATS = ["Ranks", "Crates", "Grades", "Subscriptions", "Gems"];
 const REALMS = ["survival", "lifesteal", "duels", "oneblock"];
@@ -13,6 +14,12 @@ const FAQ = [
 ];
 const wrap = (s) => ({ get: (k) => { try { return s().getItem(k); } catch { return null; } }, set: (k, v) => { try { s().setItem(k, v); } catch {} } });
 const store = wrap(() => localStorage), sess = wrap(() => sessionStorage);
+
+function Card({ p, i, fmt, inCart, add }) {
+  return (<li className="card" style={{ "--n": i % 8 }}><div className="top"><div className="icon" aria-hidden="true">{p.name[0]}</div><span className="tag">{p.category}{p.realm !== "all" && ` / ${p.realm}`}</span></div>
+    <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
+    <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={() => add(p)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
+}
 
 export default function Store({ products, patrons, email, hire }) {
   const [ign, setIgn] = useState(null), [ignOpen, setIgnOpen] = useState(false), [ignVal, setIgnVal] = useState(""), [platform, setPlatform] = useState("bedrock"), [err, setErr] = useState("");
@@ -40,6 +47,12 @@ export default function Store({ products, patrons, email, hire }) {
     return () => { removeEventListener("scroll", sc); removeEventListener("keydown", k); document.removeEventListener("click", g, true); };
   }, []);
 
+  useEffect(() => {
+    const els = [...document.querySelectorAll("main > section:not(.hero)")];
+    els.forEach((e) => e.classList.add("rv"));
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 });
+    els.forEach((e) => io.observe(e)); return () => io.disconnect();
+  }, []);
   const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); store.set("theme", t); document.documentElement.dataset.theme = t; };
   const saveIgn = () => { const v = ignVal.trim(); if (!RULES[platform].test(v)) return setErr(platform === "java" ? "Java names: 3 to 16 letters, numbers or underscores." : "Bedrock names: 3 to 16 letters, numbers, spaces or underscores."); store.set("ign", v); store.set("platform", platform); sess.set("ignSeen", "1"); setIgn(v); setIgnOpen(false); setErr(""); toast(`Welcome, ${v}!`); };
   const add = (p) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); setCart([...cart, p.id]); toast(`${p.name} added to cart`); };
@@ -53,16 +66,13 @@ export default function Store({ products, patrons, email, hire }) {
   const list = products.filter((p) => (realm === "all" || p.realm === "all" || p.realm === realm) && (cat === "All" || p.category === cat) && (p.name + p.description).toLowerCase().includes(q.toLowerCase()));
   const featured = products.filter((p) => p.badge === "Popular").slice(0, 3);
   const count = (r) => products.filter((p) => p.realm === r).length;
-  const Card = ({ p }) => (<li className="card"><div className="top"><div className="icon" aria-hidden="true">{p.name[0]}</div><span className="tag">{p.category}{p.realm !== "all" && ` / ${p.realm}`}</span></div>
-    <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
-    <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={() => add(p)}>{cart.includes(p.id) ? "In cart" : "Add to cart"}</button></div></li>);
 
   return (<>
     <div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
     <header className="head"><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
       <nav className={menu ? "open" : ""} aria-label="Main" onClick={() => setMenu(false)}><a href="#realms">Realms</a><a href="#store">Store</a><a href="#patrons">Patrons</a><a href="#about">About</a><a href="#faq">FAQ</a></nav>
-      <div className="tools"><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur", e.target.value); }}>{Object.keys(RATES).map((c) => <option key={c}>{c}</option>)}</select>
+      <div className="tools"><Music /><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur", e.target.value); }}>{Object.keys(RATES).map((c) => <option key={c}>{c}</option>)}</select>
         <button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
         <button className="ghost" onClick={() => setCartOpen(true)}>Cart ({cart.length})</button>
         <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
@@ -70,16 +80,18 @@ export default function Store({ products, patrons, email, hire }) {
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>Menu</button></div></div></header>
 
     <main id="main">
-      <section className="hero"><div className="wrap"><p className="kicker">Official demo store</p><h1>Support the server.<br />Get your <em>rank</em>.</h1>
+      <section className="hero"><div className="blocks" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} />)}</div><div className="wrap"><p className="kicker">Official demo store</p><h1>Support the server.<br />Get your <em>rank</em>.</h1>
         <p className="lead">Four realms, one account. Pick a realm, grab ranks, crates and gems.</p>
         <div className="row"><a className="btn" href="#store">Start shopping</a>
           <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net</button></div>
         <dl className="stats"><div><dt>Realms</dt><dd>4</dd></div><div><dt>Items</dt><dd>{products.length}</dd></div><div><dt>Online (fake)</dt><dd>1,284</dd></div></dl></div></section>
 
+      <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Gems", "PixelFox joined Supporter+", "Nova_77 grabbed Warrior"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
+
       <section id="realms" className="wrap"><h2>Select realm</h2>
         <div className="realms">{REALMS.map((r, i) => <button key={r} aria-pressed={realm === r} className="realm" onClick={() => { setRealm(realm === r ? "all" : r); document.getElementById("store").scrollIntoView({ behavior: "smooth" }); }}><span>0{i + 1}</span><b>{r}</b><small>{count(r)} items</small></button>)}</div></section>
 
-      <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p) => <Card key={p.id} p={p} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
+      <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
 
       <section id="patrons" className="wrap"><h2>Patrons</h2>
         {patrons.length ? <ul className="patrons">{patrons.map((p) => <li key={p.name}><b>{p.name}</b><span>{p.tier}</span></li>)}</ul> : <p className="empty">No patrons yet. Be the first name here.</p>}</section>
@@ -87,7 +99,7 @@ export default function Store({ products, patrons, email, hire }) {
       <section id="store" className="wrap"><h2>Store{realm !== "all" && <span className="sub"> / {realm}</span>}</h2>
         <div className="filters" role="group" aria-label="Categories">{["All", ...CATS].map((c) => <button key={c} aria-pressed={cat === c} className="chip" onClick={() => setCat(c)}>{c}</button>)}
           <input ref={searchRef} type="search" aria-label="Search products (press /)" placeholder="Search ( / )" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        {list.length ? <ul className="grid">{list.map((p) => <Card key={p.id} p={p} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setRealm("all"); setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
+        {list.length ? <ul className="grid">{list.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setRealm("all"); setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
 
       <section id="about" className="wrap prose"><h2>About us</h2><p>We are a small community running Bedrock and Java realms. This store is a demo build: names, prices and perks are placeholders.</p></section>
       <section id="faq" className="wrap prose"><h2>FAQ</h2>{FAQ.map(([a, b]) => <details key={a}><summary>{a}</summary><div><p>{b}</p></div></details>)}</section>
@@ -132,7 +144,7 @@ export default function Store({ products, patrons, email, hire }) {
       <div className="row"><button className="btn">{auth === "login" ? "Log in" : "Register"}</button>
         <button type="button" className="ghost" onClick={() => setAuth(auth === "login" ? "register" : "login")}>{auth === "login" ? "Need an account?" : "Have an account?"}</button></div></form></div>}
 
-    {consent === "pending" && <div className="cookie" role="region" aria-label="Cookie consent"><p>We store your IGN, theme and currency in your browser so the store works. No analytics run in this demo.</p>
+    {consent === "pending" && <div className="cookie" role="region" aria-label="Cookie consent"><p>We store your IGN, theme, currency and music setting in your browser so the store works. No analytics run in this demo.</p>
       <button className="btn" onClick={() => { store.set("consent", "all"); setConsent("done"); }}>Accept</button>
       <button className="ghost" onClick={() => { store.set("consent", "essential"); setConsent("done"); }}>Essential only</button></div>}
 
