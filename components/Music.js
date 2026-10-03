@@ -10,17 +10,24 @@ function engine() {
   const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700;
   const comp = ctx.createDynamicsCompressor(); // keeps louder playback from clipping
   master.connect(lp).connect(comp).connect(ctx.destination);
+  { // dreamy room reverb + slow "tape" filter drift
+    const n = (ctx.sampleRate * 1.8) | 0, ir = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 2.6; }
+    const vb = ctx.createConvolver(); vb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.3; lp.connect(vb).connect(wet).connect(comp);
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.06; lg.gain.value = 380; lfo.connect(lg).connect(lp.frequency); lfo.start();
+  }
   const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = nb.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const noise = (t, dur, g, f) => { const s = ctx.createBufferSource(), h = ctx.createBiquadFilter(), e = ctx.createGain(); s.buffer = nb; h.type = "highpass"; h.frequency.value = f; e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.0001, t + dur); s.connect(h).connect(e).connect(master); s.start(t); s.stop(t + dur); };
-  const tone = (m, t, dur, g, type = "triangle") => { const o = ctx.createOscillator(), e = ctx.createGain(); o.type = type; o.frequency.value = hz(m); o.detune.value = (Math.random() - 0.5) * 14; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g, t + 0.04); e.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(e).connect(master); o.start(t); o.stop(t + dur + 0.05); };
+  const tone = (m, t, dur, g, type = "triangle", at = 0.04) => { const o = ctx.createOscillator(), e = ctx.createGain(); o.type = type; o.frequency.value = hz(m); o.detune.value = (Math.random() - 0.5) * 14; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g, t + at); e.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(e).connect(master); o.start(t); o.stop(t + dur + 0.05); };
   const kick = (t) => { const o = ctx.createOscillator(), e = ctx.createGain(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.18); e.gain.setValueAtTime(0.12, t); e.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(e).connect(master); o.start(t); o.stop(t + 0.3); };
   const bed = ctx.createBufferSource(), bg = ctx.createGain(), bf = ctx.createBiquadFilter(); bed.buffer = nb; bed.loop = true; bf.type = "bandpass"; bf.frequency.value = 3000; bg.gain.value = 0.004; bed.connect(bf).connect(bg).connect(master); bed.start();
   let next = ctx.currentTime + 0.15, i = 0;
   const id = setInterval(() => {
+    if (next < ctx.currentTime - 0.1) next = ctx.currentTime + 0.1;
     while (next < ctx.currentTime + 0.5) {
       const c = CH[(i >> 2) % 8], b = i % 4;
-      if (b === 0) { c.forEach((m, k) => tone(m, next + k * 0.015, BEAT * 3.8, 0.045)); tone(c[0] - 12, next, BEAT * 3.6, 0.07, "sine"); }
+      if (b === 0) { c.forEach((m, k) => tone(m, next + k * 0.015, BEAT * 3.8, 0.045, "triangle", 0.16)); tone(c[0] - 12, next, BEAT * 3.6, 0.07, "sine"); }
       if (b === 0 || b === 2) kick(next); else noise(next, 0.12, 0.022, 1800);
       noise(next + BEAT / 2 + 0.03, 0.04, 0.008, 7000);
       if (Math.random() < 0.25) noise(next + Math.random() * BEAT, 0.012, 0.035, 2500); // vinyl pops

@@ -26,20 +26,33 @@ function Count({ to }) {
   useEffect(() => { const t0 = performance.now(); let f; const step = (t) => { const k = Math.min((t - t0) / 1200, 1); if (r.current) r.current.textContent = Math.round(to * (1 - (1 - k) ** 3)).toLocaleString("en-US"); if (k < 1) f = requestAnimationFrame(step); }; f = requestAnimationFrame(step); return () => cancelAnimationFrame(f); }, [to]);
   return <span ref={r}>0</span>;
 }
-function fly(el) {
+function fly(el) { // curved arc + comet trail, then the cart bounces (GPU transforms only)
   const cb = document.querySelector(".cart");
   if (!el || !cb || calm()) return;
-  const a = el.getBoundingClientRect(), b = cb.getBoundingClientRect(), d = document.createElement("i");
-  d.className = "fly"; d.style.cssText = `left:${a.left + a.width / 2}px;top:${a.top + a.height / 2}px`; document.body.appendChild(d);
-  const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2;
-  d.animate([{ transform: "translate(-50%,-50%) scale(1)", opacity: 1 }, { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.3)`, opacity: 0.4 }], { duration: 600, easing: "cubic-bezier(.5,0,.8,.5)" }).onfinish = () => d.remove();
+  const a = el.getBoundingClientRect(), b = cb.getBoundingClientRect();
+  const x0 = a.left + a.width / 2, y0 = a.top + a.height / 2, dx = b.left + b.width / 2 - x0, dy = b.top + b.height / 2 - y0;
+  const lift = Math.min(170, Math.abs(dy) * 0.45 + 70), T = (x, y, r, sc) => `translate3d(calc(-50% + ${x}px),calc(-50% + ${y}px),0) rotate(${r}deg) scale(${sc})`;
+  for (let k = 0; k < 5; k++) {
+    const d = document.createElement("i"), o = 1 - k * 0.2; d.className = "fly"; d.style.cssText = `left:${x0}px;top:${y0}px;width:${18 - k * 2.5}px;height:${18 - k * 2.5}px`; document.body.appendChild(d);
+    const an = d.animate([
+      { transform: T(0, 0, 45, 1), opacity: o, offset: 0 },
+      { transform: T(dx * 0.4, dy * 0.4 - lift, 200, 1.15), opacity: o, offset: 0.42 },
+      { transform: T(dx, dy, 405, 0.3), opacity: o * 0.5, offset: 1 },
+    ], { duration: 680, delay: k * 42, easing: "cubic-bezier(.45,.05,.4,1)", fill: "both" });
+    an.onfinish = () => { d.remove(); if (k === 0) cb.animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(.95)" }, { transform: "scale(1)" }], { duration: 420, easing: "cubic-bezier(.34,1.56,.64,1)" }); };
+  }
 }
-function burst() {
+function burst() { // confetti with real launch + gravity phases
   if (calm()) return;
-  for (let k = 0; k < 22; k++) {
-    const d = document.createElement("i"); d.className = "conf"; d.style.background = k % 2 ? "var(--acc)" : "var(--acc2)"; document.body.appendChild(d);
-    const a = Math.random() * 6.28, r = 90 + Math.random() * 160;
-    d.animate([{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${Math.cos(a) * r}px,${Math.sin(a) * r + 80}px) rotate(${Math.random() * 540}deg)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: "cubic-bezier(.2,.8,.3,1)" }).onfinish = () => d.remove();
+  const cols = ["var(--acc)", "var(--acc2)", "#fff", "var(--acc)"], ox = innerWidth / 2, oy = innerHeight * 0.55;
+  for (let k = 0; k < 44; k++) {
+    const d = document.createElement("i"), sz = 6 + Math.random() * 7; d.className = "conf"; d.style.cssText = `left:${ox}px;top:${oy}px;background:${cols[k % 4]};width:${sz}px;height:${k % 3 ? sz * 1.6 : sz}px;${k % 5 === 0 ? "border-radius:50%" : ""}`; document.body.appendChild(d);
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.5, v = 170 + Math.random() * 330, x = Math.cos(a) * v, up = Math.sin(a) * v * 0.7, fall = innerHeight * 0.45 + Math.random() * 220, rot = (Math.random() - 0.5) * 1100;
+    d.animate([
+      { transform: "translate3d(0,0,0) rotate(0deg)", opacity: 1, offset: 0, easing: "cubic-bezier(.15,.75,.35,1)" },
+      { transform: `translate3d(${x * 0.65}px,${up}px,0) rotate(${rot * 0.5}deg)`, opacity: 1, offset: 0.38, easing: "cubic-bezier(.5,0,.9,.55)" },
+      { transform: `translate3d(${x}px,${up + fall}px,0) rotate(${rot}deg)`, opacity: 0, offset: 1 },
+    ], { duration: 1400 + Math.random() * 700 }).onfinish = () => d.remove();
   }
 }
 const S = { fill: "color-mix(in srgb, var(--acc2) 62%, #000)" };
@@ -55,7 +68,7 @@ function Ico({ c }) { return <svg className="ico" viewBox="0 0 64 64" aria-hidde
 const Card = memo(function Card({ p, i, price, inCart, add }) {
   return (<li className="card" style={{ "--n": i < 8 ? i : 0 }}><div className="top"><Ico c={p.category} /><span className="tag">{p.category}</span></div>
     <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
-    <div className="buy"><b>{price}</b><button key={String(inCart)} className={"btn" + (inCart ? " pop" : "")} disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
+    <div className="buy"><b key={price}>{price}</b><button key={String(inCart)} className={"btn" + (inCart ? " pop" : "")} disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
 });
 
 export default function Store({ products, patrons, email, hire }) {
@@ -67,7 +80,7 @@ export default function Store({ products, patrons, email, hire }) {
   const [active, setActive] = useState(""), [sc2, setSc2] = useState(false), [sort, setSort] = useState("feat"), [curOpen, setCurOpen] = useState(false), [vis, setVis] = useState(9);
   const searchRef = useRef();
   const dq = useDeferredValue(q);
-  const toast = (msg, type = "ok") => { if (type === "err") sfx("err"); const id = Math.random(); setToasts((t) => [...t.slice(-3), { id, msg, type }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500); };
+  const toast = (msg, type = "ok") => { if (type === "err") sfx("err"); const id = Math.random(); setToasts((t) => [...t.slice(-3), { id, msg, type }]); setTimeout(() => setToasts((t) => t.map((x) => (x.id === id ? { ...x, out: 1 } : x))), 3250); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3520); };
   const convC = (c, n) => { const m = CUR[c]; return m.s ? Math.max(m.s - m.c, Math.round((n * m.r) / m.s) * m.s - m.c) : Math.max(0.99, Math.ceil(n * m.r) - 0.01); };
   const fmtC = (c, v) => new Intl.NumberFormat(CUR[c].l, { style: "currency", currency: c, minimumFractionDigits: CUR[c].s ? 0 : 2, maximumFractionDigits: CUR[c].s ? 0 : 2 }).format(v);
   const conv = (n) => convC(cur, n), fmtV = (v) => fmtC(cur, v);
@@ -95,28 +108,44 @@ export default function Store({ products, patrons, email, hire }) {
     if (matchMedia("(hover:hover)").matches) document.addEventListener("pointerover", hv, { passive: true });
     return () => { removeEventListener("scroll", sc); removeEventListener("keydown", k); document.removeEventListener("click", g, true); document.removeEventListener("click", clk, true); document.removeEventListener("pointerover", hv); };
   }, []);
-  useEffect(() => { // 3D card tilt: transform-only, one card at a time, hover devices only
+  useEffect(() => { // 3D card tilt + pointer spotlight: transform/custom-props only, rect cached, hover devices only
     if (!matchMedia("(hover:hover)").matches || calm()) return;
-    let raf = 0, cur = null, ev = null;
+    let raf = 0, cur = null, ev = null, rc = null;
     const rest = (c) => { c.style.setProperty("--rx", "0deg"); c.style.setProperty("--ry", "0deg"); };
     const move = (e) => {
-      const c = e.target.closest?.(".card,.cat"); if (cur && cur !== c) rest(cur); cur = c; ev = e; if (!c || raf) return;
-      raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = cur.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5; cur.style.setProperty("--ry", (x * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
+      const c = e.target.closest?.(".card,.cat"); if (cur && cur !== c) rest(cur); if (c !== cur) rc = null; cur = c; ev = e; if (!c || raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = (rc ||= cur.getBoundingClientRect()), px = ev.clientX - r.left, py = ev.clientY - r.top; cur.style.setProperty("--ry", ((px / r.width - 0.5) * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", ((0.5 - py / r.height) * 10).toFixed(2) + "deg"); cur.style.setProperty("--mx", px.toFixed(0) + "px"); cur.style.setProperty("--my", py.toFixed(0) + "px"); });
     };
-    document.addEventListener("pointermove", move, { passive: true }); return () => document.removeEventListener("pointermove", move);
+    const drop = () => { rc = null; };
+    document.addEventListener("pointermove", move, { passive: true }); addEventListener("scroll", drop, { passive: true });
+    return () => { document.removeEventListener("pointermove", move); removeEventListener("scroll", drop); cancelAnimationFrame(raf); };
   }, []);
-  useEffect(() => { if (cartOpen || ignOpen || step || auth) sfx("open"); }, [cartOpen, ignOpen, step, auth]);
+  const wasOpen = useRef(false);
+  useEffect(() => { const o = !!(cartOpen || ignOpen || step || auth); if (o) sfx("open"); else if (wasOpen.current) sfx("close"); wasOpen.current = o; }, [cartOpen, ignOpen, step, auth]);
   useEffect(() => { const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setActive(e.target.id)), { rootMargin: "-40% 0px -55% 0px" }); document.querySelectorAll("main section[id]").forEach((e) => io.observe(e)); return () => io.disconnect(); }, []);
-  useEffect(() => { // neon cursor ring (one element, transform only)
+  useEffect(() => { // neon cursor: instant dot + smoothly trailing ring (transform only; loop sleeps when settled)
     if (!matchMedia("(hover:hover) and (pointer:fine)").matches || calm()) return;
-    const d = document.querySelector(".cursor"); if (!d) return; let x = 0, y = 0, raf = 0;
-    const mv = (e) => { x = e.clientX; y = e.clientY; d.classList.toggle("big", !!e.target.closest?.("button,a,.card,.cat,select,input,summary")); if (!raf) raf = requestAnimationFrame(() => { raf = 0; d.style.transform = `translate3d(${x}px,${y}px,0)`; d.classList.add("show"); }); };
-    document.addEventListener("pointermove", mv, { passive: true }); return () => document.removeEventListener("pointermove", mv);
+    const d = document.querySelector(".cursor"), dot = document.querySelector(".cdot"); if (!d) return;
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, shown = false;
+    const loop = () => {
+      cx += (tx - cx) * 0.22; cy += (ty - cy) * 0.22; d.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`; if (dot) dot.style.transform = `translate3d(${tx}px,${ty}px,0)`;
+      raf = Math.abs(tx - cx) > 0.1 || Math.abs(ty - cy) > 0.1 ? requestAnimationFrame(loop) : 0;
+    };
+    const mv = (e) => {
+      tx = e.clientX; ty = e.clientY; if (!shown) { shown = true; cx = tx; cy = ty; d.classList.add("show"); dot?.classList.add("show"); }
+      d.classList.toggle("big", !!e.target.closest?.("button,a,.card,.cat,select,input,summary")); if (!raf) raf = requestAnimationFrame(loop);
+    };
+    document.addEventListener("pointermove", mv, { passive: true }); return () => { document.removeEventListener("pointermove", mv); cancelAnimationFrame(raf); };
   }, []);
   useEffect(() => { setVis(9); }, [cat, dq, sort]);
+  useEffect(() => { // tap/click pulse ring
+    if (calm()) return;
+    const d = (e) => { const r = document.createElement("i"); r.className = "rip"; r.style.left = e.clientX + "px"; r.style.top = e.clientY + "px"; document.body.appendChild(r); r.animate([{ transform: "translate(-50%,-50%) scale(0)", opacity: 0.6 }, { transform: "translate(-50%,-50%) scale(1)", opacity: 0 }], { duration: 550, easing: "cubic-bezier(.2,.7,.2,1)" }).onfinish = () => r.remove(); };
+    document.addEventListener("pointerdown", d, { passive: true }); return () => document.removeEventListener("pointerdown", d);
+  }, []);
   useEffect(() => { // pause off-screen looping animations
     const io = new IntersectionObserver((es) => es.forEach((e) => e.target.toggleAttribute("data-off", !e.isIntersecting)), { rootMargin: "100px" });
-    document.querySelectorAll(".ticker,.bigtype,.coinwrap,.rain").forEach((e) => io.observe(e)); return () => io.disconnect();
+    document.querySelectorAll(".hero,.ticker,.bigtype,.coinwrap,.rain").forEach((e) => io.observe(e)); return () => io.disconnect();
   }, []);
   useEffect(() => { // scroll progress fallback; modern browsers do this in CSS off the main thread
     if (CSS.supports("animation-timeline: scroll()")) return;
@@ -131,7 +160,7 @@ export default function Store({ products, patrons, email, hire }) {
   }, []);
   useEffect(() => { const lock = menu || ignOpen || cartOpen || step || auth || curOpen; document.body.style.overflow = lock ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [menu, ignOpen, cartOpen, step, auth, curOpen]);
 
-  const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); store.set("theme", t); document.documentElement.dataset.theme = t; };
+  const flip = () => { const t = theme === "dark" ? "light" : "dark"; const apply = () => { document.documentElement.dataset.theme = t; }; if (document.startViewTransition && !calm()) document.startViewTransition(apply); else apply(); setTheme(t); store.set("theme", t); };
   const saveIgn = () => { const v = ignVal.trim(); if (!IGN_RE.test(v)) return setErr("Bedrock gamertags: 3 to 16 letters, numbers, spaces or underscores."); store.set("ign", v); sess.set("ignSeen", "1"); setIgn(v); setIgnOpen(false); setErr(""); toast(`Welcome, ${v}!`); };
   const add = (p, el) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); saveCart([...cart, p.id]); fly(el); sfx("add"); toast(`${p.name} added to cart`); };
   const addRef = useRef(); addRef.current = add;
@@ -155,7 +184,7 @@ export default function Store({ products, patrons, email, hire }) {
     {user ? <button className="ghost" onClick={logout}>Log out</button> : <button className="ghost" onClick={() => setAuth("login")}>Login</button>}</>);
 
   return (<>
-    <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" /><div className="cursor" aria-hidden="true"><i /></div>
+    <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" /><div className="cursor" aria-hidden="true"><i /></div><div className="cdot" aria-hidden="true" />
     <div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
     <header className={"head" + (sc2 ? " s" : "")}><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
@@ -165,7 +194,7 @@ export default function Store({ products, patrons, email, hire }) {
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
 
     <main id="main">
-      <section className="hero"><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="coinwrap" aria-hidden="true"><div className="cshadow" /><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
+      <section className="hero"><div className="aurora" aria-hidden="true" /><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="coinwrap" aria-hidden="true"><div className="cshadow" /><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
         <div className="wrap"><p className="kicker">Bedrock Edition server store</p>
           <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>server</em>.</h1>
           <p className="lead">Ranks, crates and tokens for our Bedrock community.</p>
@@ -206,7 +235,7 @@ export default function Store({ products, patrons, email, hire }) {
     {top && <button className="ghost totop" aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" })}>Top</button>}
 
     {cartOpen && <div className="scrim end" onClick={(e) => e.target === e.currentTarget && setCartOpen(false)}><aside role="dialog" aria-modal="true" aria-label="Your cart" className="drawer">
-      <h2>Your cart</h2>{items.length ? <><ul>{items.map((p) => <li key={p.id}><span>{p.name}</span><b>{fmt(p.price)}</b><button className="ghost" aria-label={`Remove ${p.name}`} onClick={() => saveCart(cart.filter((x) => x !== p.id))}>x</button></li>)}</ul>
+      <h2>Your cart</h2>{items.length ? <><ul>{items.map((p) => <li key={p.id}><span>{p.name}</span><b>{fmt(p.price)}</b><button className="ghost" aria-label={`Remove ${p.name}`} onClick={() => { sfx("remove"); saveCart(cart.filter((x) => x !== p.id)); }}>x</button></li>)}</ul>
         <div className="goal"><span>{totalV >= conv(10) ? "Bonus unlocked: +10% tokens (demo)" : `Add ${fmtV(conv(10) - totalV)} more to unlock +10% bonus tokens (demo)`}</span><i style={{ "--g": Math.min(totalV / conv(10), 1) }} /></div>
         <p className="tot">Total <b>{fmtV(totalV)}</b></p><button className="btn" onClick={openCheckout}>Checkout</button></> : <p className="empty">Your cart is empty. Add something from the store.</p>}
       <button className="ghost" onClick={() => setCartOpen(false)}>Close</button></aside></div>}
@@ -246,6 +275,6 @@ export default function Store({ products, patrons, email, hire }) {
       <button className="btn" onClick={() => { store.set("consent", "all"); setConsent("done"); }}>Accept</button>
       <button className="ghost" onClick={() => { store.set("consent", "essential"); setConsent("done"); }}>Essential only</button></div>}
 
-    <div className="toasts" role="status" aria-live="polite">{toasts.map((t) => <div key={t.id} className={`toast ${t.type}`}>{t.msg}</div>)}</div>
+    <div className="toasts" role="status" aria-live="polite">{toasts.map((t) => <div key={t.id} className={`toast ${t.type}${t.out ? " out" : ""}`}>{t.msg}</div>)}</div>
   </>);
 }
