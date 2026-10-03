@@ -44,5 +44,5 @@ export default function Music() {
     return () => { removeEventListener("pointerdown", first); removeEventListener("keydown", first); document.removeEventListener("visibilitychange", vis); if (E.current) { clearInterval(E.current.id); E.current.ctx.close(); E.current = null; } };
   }, []);
   const toggle = () => { want.current = !on; try { localStorage.setItem("music", on ? "off" : "on"); } catch {} on ? stop() : play(); };
-  return <button data-music className="ghost" aria-pressed={on} aria-label={on ? "Mute music" : "Play soft lofi music"} onClick={toggle}>{on ? "♪ On" : "♪ Off"}</button>;
+  return <button data-music className="ghost" aria-pressed={on} aria-label={on ? "Mute music" : "Play soft lofi music"} onClick={toggle}>♪<span className="mlab"> {on ? "On" : "Off"}</span></button>;
 }

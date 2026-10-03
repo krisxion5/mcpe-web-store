@@ -138,3 +138,24 @@ input,select{transition:border-color .2s,box-shadow .2s}input:focus,select:focus
 .rv.in .steps li{animation:flipin .5s both}.rv.in .steps li:nth-child(2){animation-delay:.08s}.rv.in .steps li:nth-child(3){animation-delay:.16s}
 nav.open a:nth-child(5){animation-delay:.2s}
 @media(max-width:720px){.steps{grid-template-columns:1fr}.cube{display:none}}
+/* ---- v11: currency sheet, more products, new motion ---- */
+:root{color-scheme:dark}[data-theme=light]{color-scheme:light}option{background:var(--card);color:var(--fg)}
+.curbtn{font-weight:700;letter-spacing:.04em}.scrim.bottom{place-items:end center;padding:0}
+.sheet{max-width:560px;border-radius:14px 14px 0 0;padding-bottom:max(1.6rem,env(safe-area-inset-bottom));animation:sheetup .35s var(--ease)}
+@keyframes sheetup{from{transform:translateY(100%)}}
+.curgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.5rem}
+.curgrid .chip{display:grid;text-align:left;border-radius:8px;padding:.6rem .8rem;gap:.1rem}.curgrid small{opacity:.75;font-size:.8rem}
+.more{display:flex;justify-content:center;margin-top:1.2rem}
+.btn.pop{animation:bump .4s var(--ease)}
+.cats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.rv.in .cat:nth-child(6){animation-delay:.3s}
+.cat{transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .15s ease-out}.cat:hover{transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-3px)}
+.hero{background:var(--bg)}.hero::before{content:"";position:absolute;inset:-48px;z-index:0;background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/48px 48px;animation:gridmove 14s linear infinite;will-change:transform}
+@keyframes gridmove{to{transform:translate3d(48px,48px,0)}}
+.rain{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.rain i{position:absolute;left:var(--x);top:-24px;width:10px;height:10px;background:var(--acc);opacity:.35;transform:rotate(45deg);animation:fall var(--t) linear var(--d) infinite;will-change:transform}
+@keyframes fall{to{transform:translate3d(0,780px,0) rotate(405deg)}}
+.cshadow{position:absolute;left:20px;top:205px;width:120px;height:14px;border-radius:50%;background:var(--acc);opacity:.18;animation:cshadow 5s ease-in-out infinite}
+@keyframes cshadow{50%{transform:scale(.8);opacity:.1}}
+@supports(animation-timeline:view()){.bigtype div{animation:bigscroll linear both;animation-timeline:view(block)}@keyframes bigscroll{from{transform:translateX(-50%)}to{transform:translateX(0)}}}
+.cookie,.totop{margin-bottom:env(safe-area-inset-bottom)}
+@media(max-width:720px){.cats{grid-template-columns:1fr 1fr}.mlab{display:none}.tools .ghost{padding:.45rem .6rem}.rain i:nth-child(n+5){display:none}}

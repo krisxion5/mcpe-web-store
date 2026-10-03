@@ -3,7 +3,7 @@ import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from
 import Music from "./Music";
 import { sfx } from "../lib/sfx";
 const IGN_RE = /^[A-Za-z0-9_ ]{3,16}$/;
-const CATS = ["Ranks", "Grades", "Crates", "Subscriptions", "Tokens"];
+const CATS = ["Ranks", "Grades", "Crates", "Cosmetics", "Subscriptions", "Tokens"];
 // Regional STORE prices (priced for each market, not live FX). r = multiplier on the USD base, s = rounding step, c = charm offset.
 const CUR = {
   INR: { r: 40, s: 10, c: 1, l: "en-IN" }, PKR: { r: 120, s: 10, c: 1, l: "en-PK" }, BDT: { r: 60, s: 10, c: 1, l: "en-BD" },
@@ -48,13 +48,14 @@ const ICONS = {
   Grades: <><path d="M32 6 L54 14 V32 C54 44 44 54 32 58 C20 54 10 44 10 32 V14 Z" fill="var(--acc)" /><path d="M32 6 L54 14 V32 C54 44 44 54 32 58 Z" fill="var(--acc2)" /><path d="M32 20 L36 29 L46 30 L38.5 36.5 L41 46 L32 41 L23 46 L25.5 36.5 L18 30 L28 29 Z" fill="var(--ink)" /></>,
   Crates: <><path d="M32 6 L56 18 L32 30 L8 18 Z" fill="var(--acc)" /><path d="M8 18 L32 30 V58 L8 46 Z" fill="var(--acc2)" /><path d="M56 18 L32 30 V58 L56 46 Z" style={S} /></>,
   Subscriptions: <><path d="M32 10 A22 22 0 1 1 10 32" fill="none" stroke="var(--acc)" strokeWidth="9" strokeLinecap="round" /><path d="M0 26 L22 26 L11 44 Z" fill="var(--acc2)" /><circle cx="32" cy="32" r="5" fill="var(--acc)" /></>,
+  Cosmetics: <><path d="M32 4 L38 26 L60 32 L38 38 L32 60 L26 38 L4 32 L26 26 Z" fill="var(--acc)" /><path d="M32 4 L38 26 L60 32 L32 32 Z" fill="var(--acc2)" /><circle cx="52" cy="11" r="4" fill="var(--acc2)" /></>,
   Tokens: <>{[40, 28, 16].map((y) => <g key={y}><ellipse cx="32" cy={y + 8} rx="22" ry="9" style={S} /><rect x="10" y={y} width="44" height="8" fill="var(--acc2)" /><ellipse cx="32" cy={y} rx="22" ry="9" fill="var(--acc)" /></g>)}</>,
 };
 function Ico({ c }) { return <svg className="ico" viewBox="0 0 64 64" aria-hidden="true">{ICONS[c] || ICONS.Crates}</svg>; }
 const Card = memo(function Card({ p, i, price, inCart, add }) {
   return (<li className="card" style={{ "--n": i < 8 ? i : 0 }}><div className="top"><Ico c={p.category} /><span className="tag">{p.category}</span></div>
     <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
-    <div className="buy"><b>{price}</b><button className="btn" disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
+    <div className="buy"><b>{price}</b><button key={String(inCart)} className={"btn" + (inCart ? " pop" : "")} disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
 });
 
 export default function Store({ products, patrons, email, hire }) {
@@ -63,12 +64,13 @@ export default function Store({ products, patrons, email, hire }) {
   const [cart, setCart] = useState([]), [cartOpen, setCartOpen] = useState(false), [step, setStep] = useState(null), [confirm, setConfirm] = useState(""), [cErr, setCErr] = useState(""), [placing, setPlacing] = useState(false);
   const [toasts, setToasts] = useState([]), [theme, setTheme] = useState("dark"), [menu, setMenu] = useState(false), [consent, setConsent] = useState("done"), [top, setTop] = useState(false);
   const [auth, setAuth] = useState(null), [form, setForm] = useState({ email: "", password: "" }), [show, setShow] = useState(false), [user, setUser] = useState(null);
-  const [active, setActive] = useState(""), [sc2, setSc2] = useState(false), [sort, setSort] = useState("feat");
+  const [active, setActive] = useState(""), [sc2, setSc2] = useState(false), [sort, setSort] = useState("feat"), [curOpen, setCurOpen] = useState(false), [vis, setVis] = useState(9);
   const searchRef = useRef();
   const dq = useDeferredValue(q);
   const toast = (msg, type = "ok") => { if (type === "err") sfx("err"); const id = Math.random(); setToasts((t) => [...t.slice(-3), { id, msg, type }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500); };
-  const conv = (n) => { const m = CUR[cur]; return m.s ? Math.max(m.s - m.c, Math.round((n * m.r) / m.s) * m.s - m.c) : Math.max(0.99, Math.ceil(n * m.r) - 0.01); };
-  const fmtV = (v) => new Intl.NumberFormat(CUR[cur].l, { style: "currency", currency: cur, minimumFractionDigits: CUR[cur].s ? 0 : 2, maximumFractionDigits: CUR[cur].s ? 0 : 2 }).format(v);
+  const convC = (c, n) => { const m = CUR[c]; return m.s ? Math.max(m.s - m.c, Math.round((n * m.r) / m.s) * m.s - m.c) : Math.max(0.99, Math.ceil(n * m.r) - 0.01); };
+  const fmtC = (c, v) => new Intl.NumberFormat(CUR[c].l, { style: "currency", currency: c, minimumFractionDigits: CUR[c].s ? 0 : 2, maximumFractionDigits: CUR[c].s ? 0 : 2 }).format(v);
+  const conv = (n) => convC(cur, n), fmtV = (v) => fmtC(cur, v);
   const fmt = (n) => fmtV(conv(n));
   const saveCart = (c) => { setCart(c); store.set("cart", JSON.stringify(c)); };
   const loadUser = () => fetch("/api/auth").then((r) => r.json()).then((u) => setUser(u.email ? u : null)).catch(() => {});
@@ -76,12 +78,12 @@ export default function Store({ products, patrons, email, hire }) {
   useEffect(() => {
     const s = store.get("ign"); if (s) { setIgn(s); setIgnVal(s); }
     { const sv = store.get("cur2"); setCur(CUR[sv] ? sv : "INR"); };
-    try { const c = JSON.parse(store.get("cart") || "[]"); if (Array.isArray(c)) setCart(c.filter((x) => typeof x === "string")); } catch {}
+    try { const c = JSON.parse(store.get("cart") || "[]"); if (Array.isArray(c)) setCart(c.filter((x) => products.some((p) => p.id === x))); } catch {}
     if (!sess.get("ignSeen")) setIgnOpen(true);
     const t = store.get("theme") || "dark"; setTheme(t); document.documentElement.dataset.theme = t;
     setConsent(store.get("consent") || "pending"); loadUser();
     const sc = () => { setTop(scrollY > 600); setSc2(scrollY > 20); }; addEventListener("scroll", sc, { passive: true });
-    const k = (e) => { if (e.key === "Escape") { setStep(null); setAuth(null); setMenu(false); setCartOpen(false); if (store.get("ign")) setIgnOpen(false); return; } if (e.target.matches("input,textarea,select")) return; if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); } if (e.key === "c") setCartOpen(true); if (e.key === "?") toast("Shortcuts: / search, C cart, Esc close"); };
+    const k = (e) => { if (e.key === "Escape") { setStep(null); setAuth(null); setMenu(false); setCartOpen(false); setCurOpen(false); if (store.get("ign")) setIgnOpen(false); return; } if (e.target.matches("input,textarea,select")) return; if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); } if (e.key === "c") setCartOpen(true); if (e.key === "?") toast("Shortcuts: / search, C cart, Esc close"); };
     addEventListener("keydown", k);
     const seen = new WeakMap(); // double-click guard
     const g = (e) => { const b = e.target.closest?.("button,.btn"); if (!b) return; const n = Date.now(); if (n - (seen.get(b) || 0) < 700) { e.preventDefault(); e.stopPropagation(); toast("Slow down! One click at a time.", "err"); return; } seen.set(b, n); };
@@ -98,7 +100,7 @@ export default function Store({ products, patrons, email, hire }) {
     let raf = 0, cur = null, ev = null;
     const rest = (c) => { c.style.setProperty("--rx", "0deg"); c.style.setProperty("--ry", "0deg"); };
     const move = (e) => {
-      const c = e.target.closest?.(".card"); if (cur && cur !== c) rest(cur); cur = c; ev = e; if (!c || raf) return;
+      const c = e.target.closest?.(".card,.cat"); if (cur && cur !== c) rest(cur); cur = c; ev = e; if (!c || raf) return;
       raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = cur.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5; cur.style.setProperty("--ry", (x * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
     };
     document.addEventListener("pointermove", move, { passive: true }); return () => document.removeEventListener("pointermove", move);
@@ -111,9 +113,10 @@ export default function Store({ products, patrons, email, hire }) {
     const mv = (e) => { x = e.clientX; y = e.clientY; d.classList.toggle("big", !!e.target.closest?.("button,a,.card,.cat,select,input,summary")); if (!raf) raf = requestAnimationFrame(() => { raf = 0; d.style.transform = `translate3d(${x}px,${y}px,0)`; d.classList.add("show"); }); };
     document.addEventListener("pointermove", mv, { passive: true }); return () => document.removeEventListener("pointermove", mv);
   }, []);
+  useEffect(() => { setVis(9); }, [cat, dq, sort]);
   useEffect(() => { // pause off-screen looping animations
     const io = new IntersectionObserver((es) => es.forEach((e) => e.target.toggleAttribute("data-off", !e.isIntersecting)), { rootMargin: "100px" });
-    document.querySelectorAll(".ticker,.bigtype,.coinwrap").forEach((e) => io.observe(e)); return () => io.disconnect();
+    document.querySelectorAll(".ticker,.bigtype,.coinwrap,.rain").forEach((e) => io.observe(e)); return () => io.disconnect();
   }, []);
   useEffect(() => { // scroll progress fallback; modern browsers do this in CSS off the main thread
     if (CSS.supports("animation-timeline: scroll()")) return;
@@ -126,7 +129,7 @@ export default function Store({ products, patrons, email, hire }) {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 });
     els.forEach((e) => io.observe(e)); return () => io.disconnect();
   }, []);
-  useEffect(() => { const lock = menu || ignOpen || cartOpen || step || auth; document.body.style.overflow = lock ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [menu, ignOpen, cartOpen, step, auth]);
+  useEffect(() => { const lock = menu || ignOpen || cartOpen || step || auth || curOpen; document.body.style.overflow = lock ? "hidden" : ""; return () => { document.body.style.overflow = ""; }; }, [menu, ignOpen, cartOpen, step, auth, curOpen]);
 
   const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); store.set("theme", t); document.documentElement.dataset.theme = t; };
   const saveIgn = () => { const v = ignVal.trim(); if (!IGN_RE.test(v)) return setErr("Bedrock gamertags: 3 to 16 letters, numbers, spaces or underscores."); store.set("ign", v); sess.set("ignSeen", "1"); setIgn(v); setIgnOpen(false); setErr(""); toast(`Welcome, ${v}!`); };
@@ -146,8 +149,7 @@ export default function Store({ products, patrons, email, hire }) {
   const list = sort === "feat" ? list0 : [...list0].sort((a, b) => (sort === "lo" ? a.price - b.price : b.price - a.price));
   const featured = products.filter((p) => p.badge === "Popular").slice(0, 3);
   const W = (t, d) => <span style={{ "--d": d }}>{t} </span>;
-  const ctl = (<><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur2", e.target.value); }}>{Object.keys(CUR).map((c) => <option key={c}>{c}</option>)}</select>
-    <button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
+  const ctl = (<><button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
     <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
     {user?.role === "ADMIN" && <a className="ghost" href="/admin">Admin</a>}
     {user ? <button className="ghost" onClick={logout}>Log out</button> : <button className="ghost" onClick={() => setAuth("login")}>Login</button>}</>);
@@ -158,12 +160,12 @@ export default function Store({ products, patrons, email, hire }) {
     <header className={"head" + (sc2 ? " s" : "")}><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
       <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}>{[["join", "Join"], ["store", "Store"], ["patrons", "Patrons"], ["about", "About"], ["faq", "FAQ"]].map(([id, t]) => <a key={id} href={`#${id}`} className={active === id ? "on" : ""}>{t}</a>)}<div className="mt">{ctl}</div></nav>
-      <div className="tools"><Music /><div className="dt">{ctl}</div>
+      <div className="tools"><Music /><button className="ghost curbtn" aria-label="Change currency" onClick={() => setCurOpen(true)}>{cur}</button><div className="dt">{ctl}</div>
         <button className="ghost cart" aria-label={`Cart, ${cart.length} items`} onClick={() => setCartOpen(true)}>Cart<i key={cart.length}>{cart.length}</i></button>
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
 
     <main id="main">
-      <section className="hero"><div className="coinwrap" aria-hidden="true"><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
+      <section className="hero"><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="coinwrap" aria-hidden="true"><div className="cshadow" /><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
         <div className="wrap"><p className="kicker">Bedrock Edition server store</p>
           <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>server</em>.</h1>
           <p className="lead">Ranks, crates and tokens for our Bedrock community.</p>
@@ -187,7 +189,7 @@ export default function Store({ products, patrons, email, hire }) {
         <div className="filters" role="group" aria-label="Categories">{["All", ...CATS].map((c) => <button key={c} aria-pressed={cat === c} className="chip" onClick={() => setCat(c)}>{c}</button>)}
           <input ref={searchRef} type="search" aria-label="Search products (press /)" placeholder="Search ( / )" value={q} onChange={(e) => setQ(e.target.value)} />
           <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="feat">Featured</option><option value="lo">Price: low to high</option><option value="hi">Price: high to low</option></select></div>
-        {list.length ? <ul className="grid">{list.map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
+        {list.length ? <><ul className="grid">{list.slice(0, vis).map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul>{list.length > vis && <div className="more"><button className="ghost" onClick={() => setVis(vis + 9)}>Show more ({list.length - vis} left)</button></div>}</> : <p className="empty">No products match. <button className="chip" onClick={() => { setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
 
       <div className="bigtype" aria-hidden="true"><div>{[0, 1].map((k) => ["Ranks", "Crates", "Tokens", "Grades", "Perks"].map((t) => <span key={k + t}>{t}</span>))}</div></div>
 
@@ -208,6 +210,11 @@ export default function Store({ products, patrons, email, hire }) {
         <div className="goal"><span>{totalV >= conv(10) ? "Bonus unlocked: +10% tokens (demo)" : `Add ${fmtV(conv(10) - totalV)} more to unlock +10% bonus tokens (demo)`}</span><i style={{ "--g": Math.min(totalV / conv(10), 1) }} /></div>
         <p className="tot">Total <b>{fmtV(totalV)}</b></p><button className="btn" onClick={openCheckout}>Checkout</button></> : <p className="empty">Your cart is empty. Add something from the store.</p>}
       <button className="ghost" onClick={() => setCartOpen(false)}>Close</button></aside></div>}
+
+    {curOpen && <div className="scrim bottom" onClick={(e) => e.target === e.currentTarget && setCurOpen(false)}><div role="dialog" aria-modal="true" aria-label="Choose currency" className="modal sheet">
+      <h2>Currency</h2><p className="note">Prices are set per region, not converted live. Shown: VIP.</p>
+      <div className="curgrid">{Object.keys(CUR).map((c) => <button key={c} className="chip" aria-pressed={cur === c} onClick={() => { setCur(c); store.set("cur2", c); setCurOpen(false); sfx("ok"); }}><b>{c}</b><small>{fmtC(c, convC(c, 4.99))}</small></button>)}</div>
+      <button className="ghost" onClick={() => setCurOpen(false)}>Close</button></div></div>}
 
     {ignOpen && <div className="scrim"><div role="dialog" aria-modal="true" aria-labelledby="t1" className="modal">
       <h2 id="t1">Enter your Minecraft IGN</h2><p>Your Bedrock gamertag. We use it to attach purchases to the right account. This demo checks the format only. It does not verify the account exists.</p>
