@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 // Soft procedural lofi: generated in the browser, no audio files, very quiet.
-const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 64]];
+const CH = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 64], [50, 53, 57, 60], [46, 50, 53, 57], [48, 52, 55, 59], [52, 56, 59, 62]];
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
 const BEAT = 60 / 72, VOL = 0.85;
 function engine() {
@@ -19,10 +19,11 @@ function engine() {
   let next = ctx.currentTime + 0.15, i = 0;
   const id = setInterval(() => {
     while (next < ctx.currentTime + 0.5) {
-      const c = CH[(i >> 2) % 4], b = i % 4;
+      const c = CH[(i >> 2) % 8], b = i % 4;
       if (b === 0) { c.forEach((m, k) => tone(m, next + k * 0.015, BEAT * 3.8, 0.045)); tone(c[0] - 12, next, BEAT * 3.6, 0.07, "sine"); }
       if (b === 0 || b === 2) kick(next); else noise(next, 0.12, 0.022, 1800);
-      noise(next + BEAT / 2, 0.04, 0.008, 7000);
+      noise(next + BEAT / 2 + 0.03, 0.04, 0.008, 7000);
+      if (Math.random() < 0.25) noise(next + Math.random() * BEAT, 0.012, 0.035, 2500); // vinyl pops
       if (Math.random() < 0.55) tone(c[(Math.random() * 4) | 0] + 12, next + (Math.random() < 0.5 ? 0 : BEAT / 2), BEAT * 1.5, 0.028);
       next += BEAT; i++;
     }

@@ -29,3 +29,6 @@ Set `NEXT_PUBLIC_HIRE_LINK` (a mailto:, Discord or portfolio URL). Without it th
 
 ## Reseeding after the store change
 Old products stay in MongoDB until you reset them: `node --env-file=.env scripts/setup-db.mjs --reset`
+
+## Currencies
+Prices are regional store prices, not live FX. Edit the `CUR` table at the top of `components/Store.js` (r = multiplier on the USD base price, s = rounding step). Base prices live in `lib/seed.mjs` (USD).

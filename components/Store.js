@@ -1,9 +1,15 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import Music from "./Music";
+import { sfx } from "../lib/sfx";
 const IGN_RE = /^[A-Za-z0-9_ ]{3,16}$/;
 const CATS = ["Ranks", "Grades", "Crates", "Subscriptions", "Tokens"];
-const RATES = { USD: 1, EUR: 0.92, GBP: 0.79 };
+// Regional STORE prices (priced for each market, not live FX). r = multiplier on the USD base, s = rounding step, c = charm offset.
+const CUR = {
+  INR: { r: 40, s: 10, c: 1, l: "en-IN" }, PKR: { r: 120, s: 10, c: 1, l: "en-PK" }, BDT: { r: 60, s: 10, c: 1, l: "en-BD" },
+  PHP: { r: 40, s: 5, c: 1, l: "en-PH" }, IDR: { r: 12000, s: 1000, c: 0, l: "id-ID" }, USD: { r: 1, l: "en-US" },
+  EUR: { r: 0.92, l: "en-IE" }, GBP: { r: 0.79, l: "en-GB" }, CAD: { r: 1.37, l: "en-CA" }, AUD: { r: 1.5, l: "en-AU" }, AED: { r: 3.67, l: "en-AE" },
+};
 const FAQ = [
   ["What is MCPE Web Store?", "A demo storefront for a Minecraft Bedrock server. Nothing here is real: no payments, no delivery."],
   ["How do I purchase something?", "Add items to your cart, open it, re-enter your gamertag and place the demo order."],
@@ -45,38 +51,47 @@ const ICONS = {
   Tokens: <>{[40, 28, 16].map((y) => <g key={y}><ellipse cx="32" cy={y + 8} rx="22" ry="9" style={S} /><rect x="10" y={y} width="44" height="8" fill="var(--acc2)" /><ellipse cx="32" cy={y} rx="22" ry="9" fill="var(--acc)" /></g>)}</>,
 };
 function Ico({ c }) { return <svg className="ico" viewBox="0 0 64 64" aria-hidden="true">{ICONS[c] || ICONS.Crates}</svg>; }
-function Card({ p, i, fmt, inCart, add }) {
+const Card = memo(function Card({ p, i, price, inCart, add }) {
   return (<li className="card" style={{ "--n": i < 8 ? i : 0 }}><div className="top"><Ico c={p.category} /><span className="tag">{p.category}</span></div>
     <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
-    <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
-}
+    <div className="buy"><b>{price}</b><button className="btn" disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
+});
 
 export default function Store({ products, patrons, email, hire }) {
   const [ign, setIgn] = useState(null), [ignOpen, setIgnOpen] = useState(false), [ignVal, setIgnVal] = useState(""), [err, setErr] = useState("");
-  const [cat, setCat] = useState("All"), [q, setQ] = useState(""), [cur, setCur] = useState("USD");
+  const [cat, setCat] = useState("All"), [q, setQ] = useState(""), [cur, setCur] = useState("INR");
   const [cart, setCart] = useState([]), [cartOpen, setCartOpen] = useState(false), [step, setStep] = useState(null), [confirm, setConfirm] = useState(""), [cErr, setCErr] = useState(""), [placing, setPlacing] = useState(false);
   const [toasts, setToasts] = useState([]), [theme, setTheme] = useState("dark"), [menu, setMenu] = useState(false), [consent, setConsent] = useState("done"), [top, setTop] = useState(false);
   const [auth, setAuth] = useState(null), [form, setForm] = useState({ email: "", password: "" }), [show, setShow] = useState(false), [user, setUser] = useState(null);
+  const [active, setActive] = useState(""), [sc2, setSc2] = useState(false), [sort, setSort] = useState("feat");
   const searchRef = useRef();
-  const toast = (msg, type = "ok") => { const id = Math.random(); setToasts((t) => [...t.slice(-3), { id, msg, type }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500); };
-  const fmt = (n) => new Intl.NumberFormat("en", { style: "currency", currency: cur }).format(n * RATES[cur]);
+  const dq = useDeferredValue(q);
+  const toast = (msg, type = "ok") => { if (type === "err") sfx("err"); const id = Math.random(); setToasts((t) => [...t.slice(-3), { id, msg, type }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500); };
+  const conv = (n) => { const m = CUR[cur]; return m.s ? Math.max(m.s - m.c, Math.round((n * m.r) / m.s) * m.s - m.c) : Math.max(0.99, Math.ceil(n * m.r) - 0.01); };
+  const fmtV = (v) => new Intl.NumberFormat(CUR[cur].l, { style: "currency", currency: cur, minimumFractionDigits: CUR[cur].s ? 0 : 2, maximumFractionDigits: CUR[cur].s ? 0 : 2 }).format(v);
+  const fmt = (n) => fmtV(conv(n));
   const saveCart = (c) => { setCart(c); store.set("cart", JSON.stringify(c)); };
   const loadUser = () => fetch("/api/auth").then((r) => r.json()).then((u) => setUser(u.email ? u : null)).catch(() => {});
 
   useEffect(() => {
     const s = store.get("ign"); if (s) { setIgn(s); setIgnVal(s); }
-    setCur(store.get("cur") || "USD");
+    { const sv = store.get("cur2"); setCur(CUR[sv] ? sv : "INR"); };
     try { const c = JSON.parse(store.get("cart") || "[]"); if (Array.isArray(c)) setCart(c.filter((x) => typeof x === "string")); } catch {}
     if (!sess.get("ignSeen")) setIgnOpen(true);
     const t = store.get("theme") || "dark"; setTheme(t); document.documentElement.dataset.theme = t;
     setConsent(store.get("consent") || "pending"); loadUser();
-    const sc = () => setTop(scrollY > 600); addEventListener("scroll", sc, { passive: true });
-    const k = (e) => { if (e.key === "Escape") { setStep(null); setAuth(null); setMenu(false); setCartOpen(false); if (store.get("ign")) setIgnOpen(false); return; } if (e.target.matches("input,textarea,select")) return; if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); } };
+    const sc = () => { setTop(scrollY > 600); setSc2(scrollY > 20); }; addEventListener("scroll", sc, { passive: true });
+    const k = (e) => { if (e.key === "Escape") { setStep(null); setAuth(null); setMenu(false); setCartOpen(false); if (store.get("ign")) setIgnOpen(false); return; } if (e.target.matches("input,textarea,select")) return; if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); } if (e.key === "c") setCartOpen(true); if (e.key === "?") toast("Shortcuts: / search, C cart, Esc close"); };
     addEventListener("keydown", k);
     const seen = new WeakMap(); // double-click guard
     const g = (e) => { const b = e.target.closest?.("button,.btn"); if (!b) return; const n = Date.now(); if (n - (seen.get(b) || 0) < 700) { e.preventDefault(); e.stopPropagation(); toast("Slow down! One click at a time.", "err"); return; } seen.set(b, n); };
     document.addEventListener("click", g, true);
-    return () => { removeEventListener("scroll", sc); removeEventListener("keydown", k); document.removeEventListener("click", g, true); };
+    const clk = (e) => { if (e.target.closest?.("button,.btn,a,summary,select")) sfx(e.defaultPrevented ? "err" : "click"); };
+    document.addEventListener("click", clk, true);
+    let lastH = 0, lastEl = null;
+    const hv = (e) => { const b = e.target.closest?.("button,.btn,.card,.cat,a"); if (b && b !== lastEl) { lastEl = b; const n = performance.now(); if (n - lastH > 90) { lastH = n; sfx("hover"); } } else if (!b) lastEl = null; };
+    if (matchMedia("(hover:hover)").matches) document.addEventListener("pointerover", hv, { passive: true });
+    return () => { removeEventListener("scroll", sc); removeEventListener("keydown", k); document.removeEventListener("click", g, true); document.removeEventListener("click", clk, true); document.removeEventListener("pointerover", hv); };
   }, []);
   useEffect(() => { // 3D card tilt: transform-only, one card at a time, hover devices only
     if (!matchMedia("(hover:hover)").matches || calm()) return;
@@ -87,6 +102,18 @@ export default function Store({ products, patrons, email, hire }) {
       raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = cur.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5; cur.style.setProperty("--ry", (x * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
     };
     document.addEventListener("pointermove", move, { passive: true }); return () => document.removeEventListener("pointermove", move);
+  }, []);
+  useEffect(() => { if (cartOpen || ignOpen || step || auth) sfx("open"); }, [cartOpen, ignOpen, step, auth]);
+  useEffect(() => { const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setActive(e.target.id)), { rootMargin: "-40% 0px -55% 0px" }); document.querySelectorAll("main section[id]").forEach((e) => io.observe(e)); return () => io.disconnect(); }, []);
+  useEffect(() => { // neon cursor ring (one element, transform only)
+    if (!matchMedia("(hover:hover) and (pointer:fine)").matches || calm()) return;
+    const d = document.querySelector(".cursor"); if (!d) return; let x = 0, y = 0, raf = 0;
+    const mv = (e) => { x = e.clientX; y = e.clientY; d.classList.toggle("big", !!e.target.closest?.("button,a,.card,.cat,select,input,summary")); if (!raf) raf = requestAnimationFrame(() => { raf = 0; d.style.transform = `translate3d(${x}px,${y}px,0)`; d.classList.add("show"); }); };
+    document.addEventListener("pointermove", mv, { passive: true }); return () => document.removeEventListener("pointermove", mv);
+  }, []);
+  useEffect(() => { // pause off-screen looping animations
+    const io = new IntersectionObserver((es) => es.forEach((e) => e.target.toggleAttribute("data-off", !e.isIntersecting)), { rootMargin: "100px" });
+    document.querySelectorAll(".ticker,.bigtype,.coinwrap").forEach((e) => io.observe(e)); return () => io.disconnect();
   }, []);
   useEffect(() => { // scroll progress fallback; modern browsers do this in CSS off the main thread
     if (CSS.supports("animation-timeline: scroll()")) return;
@@ -103,30 +130,34 @@ export default function Store({ products, patrons, email, hire }) {
 
   const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); store.set("theme", t); document.documentElement.dataset.theme = t; };
   const saveIgn = () => { const v = ignVal.trim(); if (!IGN_RE.test(v)) return setErr("Bedrock gamertags: 3 to 16 letters, numbers, spaces or underscores."); store.set("ign", v); sess.set("ignSeen", "1"); setIgn(v); setIgnOpen(false); setErr(""); toast(`Welcome, ${v}!`); };
-  const add = (p, el) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); saveCart([...cart, p.id]); fly(el); toast(`${p.name} added to cart`); };
+  const add = (p, el) => { if (cart.includes(p.id)) return toast(`${p.name} is already in your cart`, "err"); saveCart([...cart, p.id]); fly(el); sfx("add"); toast(`${p.name} added to cart`); };
+  const addRef = useRef(); addRef.current = add;
+  const onAdd = useCallback((p, el) => addRef.current(p, el), []);
   const items = cart.map((id) => products.find((p) => p.id === id)).filter(Boolean), total = items.reduce((a, p) => a + p.price, 0);
+  const totalV = items.reduce((a, p) => a + conv(p.price), 0);
   const openCheckout = () => { if (!ign) return setIgnOpen(true); setCartOpen(false); setConfirm(""); setCErr(""); setStep("check"); };
   const place = () => {
     if (confirm.trim().toLowerCase() !== ign.toLowerCase()) return setCErr(`That doesn't match your saved IGN (${ign}). Checkout blocked.`);
-    setPlacing(true); setTimeout(() => { setPlacing(false); setStep("demo"); saveCart([]); burst(); toast("This is a demo project. Hire me to build the full version."); }, 900);
+    setPlacing(true); setTimeout(() => { setPlacing(false); setStep("demo"); saveCart([]); burst(); sfx("ok"); toast("This is a demo project. Hire me to build the full version."); }, 900);
   };
   const submitAuth = async (e) => { e.preventDefault(); const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: auth, ...form }) }); const d = await r.json().catch(() => ({})); if (r.ok) { toast(auth === "register" ? "Account created" : "Signed in"); setAuth(null); loadUser(); } else toast(d.error || "Something went wrong.", "err"); };
   const logout = async () => { await fetch("/api/auth", { method: "DELETE" }).catch(() => {}); setUser(null); toast("Logged out"); };
-  const list = products.filter((p) => (cat === "All" || p.category === cat) && (p.name + p.description).toLowerCase().includes(q.toLowerCase()));
+  const list0 = products.filter((p) => (cat === "All" || p.category === cat) && (p.name + p.description).toLowerCase().includes(dq.toLowerCase()));
+  const list = sort === "feat" ? list0 : [...list0].sort((a, b) => (sort === "lo" ? a.price - b.price : b.price - a.price));
   const featured = products.filter((p) => p.badge === "Popular").slice(0, 3);
   const W = (t, d) => <span style={{ "--d": d }}>{t} </span>;
-  const ctl = (<><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur", e.target.value); }}>{Object.keys(RATES).map((c) => <option key={c}>{c}</option>)}</select>
+  const ctl = (<><select aria-label="Currency" value={cur} onChange={(e) => { setCur(e.target.value); store.set("cur2", e.target.value); }}>{Object.keys(CUR).map((c) => <option key={c}>{c}</option>)}</select>
     <button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
     <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
     {user?.role === "ADMIN" && <a className="ghost" href="/admin">Admin</a>}
     {user ? <button className="ghost" onClick={logout}>Log out</button> : <button className="ghost" onClick={() => setAuth("login")}>Login</button>}</>);
 
   return (<>
-    <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" />
+    <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" /><div className="cursor" aria-hidden="true"><i /></div>
     <div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
-    <header className="head"><div className="wrap bar">
+    <header className={"head" + (sc2 ? " s" : "")}><div className="wrap bar">
       <a className="logo" href="#main">MCPE<span>Store</span></a>
-      <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}><a href="#store">Store</a><a href="#patrons">Patrons</a><a href="#about">About</a><a href="#faq">FAQ</a><div className="mt">{ctl}</div></nav>
+      <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}>{[["join", "Join"], ["store", "Store"], ["patrons", "Patrons"], ["about", "About"], ["faq", "FAQ"]].map(([id, t]) => <a key={id} href={`#${id}`} className={active === id ? "on" : ""}>{t}</a>)}<div className="mt">{ctl}</div></nav>
       <div className="tools"><Music /><div className="dt">{ctl}</div>
         <button className="ghost cart" aria-label={`Cart, ${cart.length} items`} onClick={() => setCartOpen(true)}>Cart<i key={cart.length}>{cart.length}</i></button>
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
@@ -145,15 +176,18 @@ export default function Store({ products, patrons, email, hire }) {
       <section className="wrap"><h2>Shop by category</h2>
         <div className="cats">{CATS.map((c, i) => <button key={c} aria-pressed={cat === c} className="cat" onClick={() => { setCat(cat === c ? "All" : c); document.getElementById("store")?.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); }}><Ico c={c} /><b>{c}</b><small>{products.filter((p) => p.category === c).length} items</small></button>)}</div></section>
 
-      <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
+      <section id="join" className="wrap"><h2>How to join</h2><ol className="steps">{[["Open Minecraft", "Launch Bedrock Edition and go to Play, then Servers."], ["Add the server", "Tap Add Server. Address play.example.net, port 19132."], ["Hop in", "Save, join, and grab your rank with the same gamertag."]].map(([t, d], i) => <li key={t}><b>0{i + 1}</b><h3>{t}</h3><p>{d}</p></li>)}</ol></section>
+
+      <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
 
       <section id="patrons" className="wrap"><h2>Patrons</h2>
         {patrons.length ? <ul className="patrons">{patrons.map((p) => <li key={p.name}><b>{p.name}</b><span>{p.tier}</span></li>)}</ul> : <p className="empty">No patrons yet. Be the first name here.</p>}</section>
 
       <section id="store" className="wrap"><h2>Store{cat !== "All" && <span className="sub"> / {cat}</span>}</h2>
         <div className="filters" role="group" aria-label="Categories">{["All", ...CATS].map((c) => <button key={c} aria-pressed={cat === c} className="chip" onClick={() => setCat(c)}>{c}</button>)}
-          <input ref={searchRef} type="search" aria-label="Search products (press /)" placeholder="Search ( / )" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        {list.length ? <ul className="grid">{list.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
+          <input ref={searchRef} type="search" aria-label="Search products (press /)" placeholder="Search ( / )" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="feat">Featured</option><option value="lo">Price: low to high</option><option value="hi">Price: high to low</option></select></div>
+        {list.length ? <ul className="grid">{list.map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul> : <p className="empty">No products match. <button className="chip" onClick={() => { setCat("All"); setQ(""); }}>Clear filters</button></p>}</section>
 
       <div className="bigtype" aria-hidden="true"><div>{[0, 1].map((k) => ["Ranks", "Crates", "Tokens", "Grades", "Perks"].map((t) => <span key={k + t}>{t}</span>))}</div></div>
 
@@ -171,7 +205,8 @@ export default function Store({ products, patrons, email, hire }) {
 
     {cartOpen && <div className="scrim end" onClick={(e) => e.target === e.currentTarget && setCartOpen(false)}><aside role="dialog" aria-modal="true" aria-label="Your cart" className="drawer">
       <h2>Your cart</h2>{items.length ? <><ul>{items.map((p) => <li key={p.id}><span>{p.name}</span><b>{fmt(p.price)}</b><button className="ghost" aria-label={`Remove ${p.name}`} onClick={() => saveCart(cart.filter((x) => x !== p.id))}>x</button></li>)}</ul>
-        <p className="tot">Total <b>{fmt(total)}</b></p><button className="btn" onClick={openCheckout}>Checkout</button></> : <p className="empty">Your cart is empty. Add something from the store.</p>}
+        <div className="goal"><span>{totalV >= conv(10) ? "Bonus unlocked: +10% tokens (demo)" : `Add ${fmtV(conv(10) - totalV)} more to unlock +10% bonus tokens (demo)`}</span><i style={{ "--g": Math.min(totalV / conv(10), 1) }} /></div>
+        <p className="tot">Total <b>{fmtV(totalV)}</b></p><button className="btn" onClick={openCheckout}>Checkout</button></> : <p className="empty">Your cart is empty. Add something from the store.</p>}
       <button className="ghost" onClick={() => setCartOpen(false)}>Close</button></aside></div>}
 
     {ignOpen && <div className="scrim"><div role="dialog" aria-modal="true" aria-labelledby="t1" className="modal">
@@ -184,7 +219,7 @@ export default function Store({ products, patrons, email, hire }) {
       <h2 id="t2">Confirm your order</h2>
       <label>Re-enter your IGN<input autoFocus value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !placing && place()} aria-invalid={!!cErr} /></label>
       {cErr && <p role="alert" className="err">{cErr}</p>}
-      <dl className="sum">{items.map((p) => [<dt key={p.id}>{p.name}</dt>, <dd key={p.id + "d"}>{fmt(p.price)}</dd>])}<dt>Account</dt><dd>{ign}</dd><dt><b>Total</b></dt><dd><b>{fmt(total)}</b></dd></dl>
+      <dl className="sum">{items.map((p) => [<dt key={p.id}>{p.name}</dt>, <dd key={p.id + "d"}>{fmt(p.price)}</dd>])}<dt>Account</dt><dd>{ign}</dd><dt><b>Total</b></dt><dd><b>{fmtV(totalV)}</b></dd></dl>
       <p className="note">Demo checkout. No payment is processed.</p>
       <div className="row"><button className="btn" disabled={placing} onClick={place}>{placing ? "Processing..." : "Place demo order"}</button><button className="ghost" onClick={() => setStep(null)}>Cancel</button></div></div></div>}
 
