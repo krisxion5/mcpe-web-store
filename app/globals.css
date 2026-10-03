@@ -82,3 +82,29 @@ label{display:grid;gap:.3rem}.pw{display:flex;gap:.4rem}.err{color:#ff6b5e}.note
 }
 @media(min-width:721px){nav a{background:linear-gradient(var(--acc),var(--acc)) 0 100%/0 2px no-repeat;padding-bottom:.2rem;transition:background-size .3s,color .15s}nav a:hover{background-size:100% 2px}}
 @media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}.curtain{display:none}}
+/* ---- v8: 3D + animation tweaks (transform/opacity only) ---- */
+:root{--ease:cubic-bezier(.22,1,.36,1)}
+@keyframes flipin{from{opacity:0;transform:perspective(800px) rotateX(-20deg) translateY(24px)}}
+@keyframes wordin{from{opacity:0;transform:perspective(600px) rotateX(-70deg) translateY(20px)}}
+@keyframes pop{from{opacity:0;transform:perspective(900px) rotateX(-14deg) translateY(16px)}}
+@keyframes spin3{to{transform:rotateX(360deg) rotateY(360deg)}}
+h1 span,h1 em{animation-name:wordin;transform-origin:50% 100%}
+.card{animation-name:flipin;transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .15s ease-out}
+.card:hover{transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-4px)}
+.rv.in .cat{animation-name:flipin}
+.ico{width:56px;height:56px;display:block;transition:transform .5s var(--ease);transform-origin:50% 60%}.cat .ico{width:44px;height:44px;margin-bottom:.4rem}
+.card:hover .ico,.cat:hover .ico{transform:translateY(-5px) rotate(-7deg) scale(1.12)}
+.btn{box-shadow:0 4px 0 var(--acc2);transition:transform .12s,box-shadow .12s}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 0 var(--acc2)}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--acc2)}
+.coinwrap{perspective:800px}.bob{perspective:none}
+.coin{display:block;position:relative;width:160px;height:160px;background:none;box-shadow:none;transform-style:preserve-3d;animation:coin 5s linear infinite}
+.coin i{position:absolute;inset:0;border-radius:50%;background:var(--acc2)}
+.coin i:nth-child(1){transform:translateZ(-6px)}.coin i:nth-child(2){transform:translateZ(-3px)}.coin i:nth-child(4){transform:translateZ(3px)}.coin i:nth-child(5){transform:translateZ(6px)}
+.coin b{position:absolute;inset:0;border-radius:50%;background:var(--acc);display:grid;place-items:center;font:900 4.5rem Georgia,serif;color:var(--ink);box-shadow:inset 0 0 0 8px var(--acc),inset 0 0 0 11px var(--acc2);backface-visibility:hidden}
+.coin .f{transform:translateZ(7px)}.coin .bk{transform:rotateY(180deg) translateZ(7px)}
+.cube{position:absolute;width:34px;height:34px;transform-style:preserve-3d;animation:spin3 10s linear infinite;will-change:transform}
+.cube b{position:absolute;inset:0;border:2px solid var(--acc);background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.cube b:nth-child(1){transform:translateZ(17px)}.cube b:nth-child(2){transform:rotateY(90deg) translateZ(17px)}.cube b:nth-child(3){transform:rotateY(180deg) translateZ(17px)}
+.cube b:nth-child(4){transform:rotateY(-90deg) translateZ(17px)}.cube b:nth-child(5){transform:rotateX(90deg) translateZ(17px)}.cube b:nth-child(6){transform:rotateX(-90deg) translateZ(17px)}
+.cube:nth-child(2){left:0;top:200px}.cube:nth-child(3){right:0;top:10px;animation-duration:14s}.cube:nth-child(4){left:140px;top:240px;animation-duration:12s;animation-direction:reverse}

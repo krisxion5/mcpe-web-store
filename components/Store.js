@@ -36,8 +36,17 @@ function burst() {
     d.animate([{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${Math.cos(a) * r}px,${Math.sin(a) * r + 80}px) rotate(${Math.random() * 540}deg)`, opacity: 0 }], { duration: 900 + Math.random() * 400, easing: "cubic-bezier(.2,.8,.3,1)" }).onfinish = () => d.remove();
   }
 }
+const S = { fill: "color-mix(in srgb, var(--acc2) 62%, #000)" };
+const ICONS = {
+  Ranks: <><path d="M6 48 L10 18 L23 31 L32 12 L41 31 L54 18 L58 48 Z" fill="var(--acc)" /><path d="M32 12 L41 31 L58 48 L32 48 Z" fill="var(--acc2)" /><rect x="6" y="48" width="52" height="7" style={S} /></>,
+  Grades: <><path d="M32 6 L54 14 V32 C54 44 44 54 32 58 C20 54 10 44 10 32 V14 Z" fill="var(--acc)" /><path d="M32 6 L54 14 V32 C54 44 44 54 32 58 Z" fill="var(--acc2)" /><path d="M32 20 L36 29 L46 30 L38.5 36.5 L41 46 L32 41 L23 46 L25.5 36.5 L18 30 L28 29 Z" fill="var(--ink)" /></>,
+  Crates: <><path d="M32 6 L56 18 L32 30 L8 18 Z" fill="var(--acc)" /><path d="M8 18 L32 30 V58 L8 46 Z" fill="var(--acc2)" /><path d="M56 18 L32 30 V58 L56 46 Z" style={S} /></>,
+  Subscriptions: <><path d="M32 10 A22 22 0 1 1 10 32" fill="none" stroke="var(--acc)" strokeWidth="9" strokeLinecap="round" /><path d="M0 26 L22 26 L11 44 Z" fill="var(--acc2)" /><circle cx="32" cy="32" r="5" fill="var(--acc)" /></>,
+  Tokens: <>{[40, 28, 16].map((y) => <g key={y}><ellipse cx="32" cy={y + 8} rx="22" ry="9" style={S} /><rect x="10" y={y} width="44" height="8" fill="var(--acc2)" /><ellipse cx="32" cy={y} rx="22" ry="9" fill="var(--acc)" /></g>)}</>,
+};
+function Ico({ c }) { return <svg className="ico" viewBox="0 0 64 64" aria-hidden="true">{ICONS[c] || ICONS.Crates}</svg>; }
 function Card({ p, i, fmt, inCart, add }) {
-  return (<li className="card" style={{ "--n": i < 8 ? i : 0 }}><div className="top"><div className="icon" aria-hidden="true">{p.name[0]}</div><span className="tag">{p.category}</span></div>
+  return (<li className="card" style={{ "--n": i < 8 ? i : 0 }}><div className="top"><Ico c={p.category} /><span className="tag">{p.category}</span></div>
     <div><h3>{p.name}{p.badge && <span className="badge">{p.badge}</span>}</h3><p>{p.description}</p></div>
     <div className="buy"><b>{fmt(p.price)}</b><button className="btn" disabled={!p.available} onClick={(e) => add(p, e.currentTarget)}>{inCart ? "In cart" : "Add to cart"}</button></div></li>);
 }
@@ -68,6 +77,16 @@ export default function Store({ products, patrons, email, hire }) {
     const g = (e) => { const b = e.target.closest?.("button,.btn"); if (!b) return; const n = Date.now(); if (n - (seen.get(b) || 0) < 700) { e.preventDefault(); e.stopPropagation(); toast("Slow down! One click at a time.", "err"); return; } seen.set(b, n); };
     document.addEventListener("click", g, true);
     return () => { removeEventListener("scroll", sc); removeEventListener("keydown", k); document.removeEventListener("click", g, true); };
+  }, []);
+  useEffect(() => { // 3D card tilt: transform-only, one card at a time, hover devices only
+    if (!matchMedia("(hover:hover)").matches || calm()) return;
+    let raf = 0, cur = null, ev = null;
+    const rest = (c) => { c.style.setProperty("--rx", "0deg"); c.style.setProperty("--ry", "0deg"); };
+    const move = (e) => {
+      const c = e.target.closest?.(".card"); if (cur && cur !== c) rest(cur); cur = c; ev = e; if (!c || raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = cur.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5; cur.style.setProperty("--ry", (x * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", (-y * 10).toFixed(2) + "deg"); });
+    };
+    document.addEventListener("pointermove", move, { passive: true }); return () => document.removeEventListener("pointermove", move);
   }, []);
   useEffect(() => { // scroll progress fallback; modern browsers do this in CSS off the main thread
     if (CSS.supports("animation-timeline: scroll()")) return;
@@ -113,7 +132,7 @@ export default function Store({ products, patrons, email, hire }) {
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
 
     <main id="main">
-      <section className="hero"><div className="coinwrap" aria-hidden="true"><div className="bob"><div className="coin"><span>T</span></div></div><i /><i /><i /></div>
+      <section className="hero"><div className="coinwrap" aria-hidden="true"><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
         <div className="wrap"><p className="kicker">Bedrock Edition server store</p>
           <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>server</em>.</h1>
           <p className="lead">Ranks, crates and tokens for our Bedrock community.</p>
@@ -124,7 +143,7 @@ export default function Store({ products, patrons, email, hire }) {
       <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Tokens", "PixelFox joined Supporter+", "Nova_77 grabbed Builder"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
 
       <section className="wrap"><h2>Shop by category</h2>
-        <div className="cats">{CATS.map((c, i) => <button key={c} aria-pressed={cat === c} className="cat" onClick={() => { setCat(cat === c ? "All" : c); document.getElementById("store")?.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); }}><span>0{i + 1}</span><b>{c}</b><small>{products.filter((p) => p.category === c).length} items</small></button>)}</div></section>
+        <div className="cats">{CATS.map((c, i) => <button key={c} aria-pressed={cat === c} className="cat" onClick={() => { setCat(cat === c ? "All" : c); document.getElementById("store")?.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); }}><Ico c={c} /><b>{c}</b><small>{products.filter((p) => p.category === c).length} items</small></button>)}</div></section>
 
       <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} fmt={fmt} inCart={cart.includes(p.id)} add={add} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
 
