@@ -32,10 +32,10 @@ function engine() {
 export default function Music() {
   const [on, setOn] = useState(false), E = useRef(null), want = useRef(true);
   const play = () => { try { if (!E.current) E.current = engine(); const { ctx, master } = E.current; ctx.resume(); master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(VOL, ctx.currentTime, 1.2); setOn(true); } catch {} };
-  const stop = () => { const e = E.current; if (!e) return; e.master.gain.setTargetAtTime(0, e.ctx.currentTime, 0.2); setTimeout(() => { if (!want.current) e.ctx.suspend(); }, 900); setOn(false); };
+  const stop = () => { setOn(false); const e = E.current; if (!e) return; e.master.gain.setTargetAtTime(0, e.ctx.currentTime, 0.2); setTimeout(() => { if (!want.current) e.ctx.suspend(); }, 900); };
   useEffect(() => {
     let pref; try { pref = localStorage.getItem("music"); } catch {}
-    want.current = pref !== "off";
+    want.current = pref !== "off"; setOn(want.current); // on by default; audio starts at your first tap (browsers block autoplay)
     const first = (e) => { if (e.target.closest?.("[data-music]")) return; if (want.current && !E.current) play(); };
     addEventListener("pointerdown", first, { once: true }); addEventListener("keydown", first, { once: true });
     const vis = () => { const e = E.current; if (!e) return; if (document.hidden) e.ctx.suspend(); else if (want.current) e.ctx.resume(); };

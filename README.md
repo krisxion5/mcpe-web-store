@@ -26,3 +26,6 @@ Product detail pages, skeleton loaders, orders API and history, admin CRUD, `og:
 
 ## Hire button
 Set `NEXT_PUBLIC_HIRE_LINK` (a mailto:, Discord or portfolio URL). Without it the button emails the support address.
+
+## Reseeding after the store change
+Old products stay in MongoDB until you reset them: `node --env-file=.env scripts/setup-db.mjs --reset`

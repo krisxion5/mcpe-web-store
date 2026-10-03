@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { setSession } from "@/lib/auth";
+import { setSession, getUser } from "@/lib/auth";
+import { cookies } from "next/headers";
 const hits = new Map(); // per-instance; use Upstash/Vercel KV for global limits
 const limited = (ip) => { const n = Date.now(), r = (hits.get(ip) || []).filter((t) => n - t < 60000); r.push(n); hits.set(ip, r); return r.length > 10; };
 const json = (b, s = 200) => Response.json(b, { status: s });
@@ -26,3 +27,5 @@ async function handle(req) {
   await setSession(u._id);
   return json({ ok: true });
 }
+export async function GET() { try { const u = await getUser(); return json(u ? { email: u.email, role: u.role } : {}); } catch { return json({}); } }
+export async function DELETE() { (await cookies()).delete("sid"); return json({ ok: true }); }
