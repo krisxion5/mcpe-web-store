@@ -1,5 +1,5 @@
 {
- "name": "mcpe-web-store",
+ "name": "endermc-store",
  "private": true,
  "scripts": {
   "dev": "next dev",

@@ -11,7 +11,7 @@ const CUR = {
   EUR: { r: 0.92, l: "en-IE" }, GBP: { r: 0.79, l: "en-GB" }, CAD: { r: 1.37, l: "en-CA" }, AUD: { r: 1.5, l: "en-AU" }, AED: { r: 3.67, l: "en-AE" },
 };
 const FAQ = [
-  ["What is MCPE Web Store?", "A demo storefront for a Minecraft Bedrock server. Nothing here is real: no payments, no delivery."],
+  ["What is EnderMC?", "The official demo store for EnderMC, a Minecraft Bedrock server. Nothing here is real: no payments, no delivery."],
   ["How do I purchase something?", "Add items to your cart, open it, re-enter your gamertag and place the demo order."],
   ["What are Tokens?", "Tokens are the in-game currency for the token shop. Packs bigger than 500 include bonus tokens."],
   ["Why do I need my IGN?", "So an order is tied to the right account. This demo checks the format only, not that the account exists."],
@@ -187,7 +187,7 @@ export default function Store({ products, patrons, email, hire }) {
     <div className="progress" aria-hidden="true" /><div className="curtain" aria-hidden="true" /><div className="cursor" aria-hidden="true"><i /></div><div className="cdot" aria-hidden="true" />
     <div className="demo-bar">DEMO PROJECT: nothing here is real. <a href={hire}>Hire me to build the full version</a></div>
     <header className={"head" + (sc2 ? " s" : "")}><div className="wrap bar">
-      <a className="logo" href="#main">MCPE<span>Store</span></a>
+      <a className="logo" href="#main">Ender<span>MC</span></a>
       <nav className={menu ? "open" : ""} aria-label="Main" onClick={(e) => e.target.closest("a") && setMenu(false)}>{[["join", "Join"], ["store", "Store"], ["patrons", "Patrons"], ["about", "About"], ["faq", "FAQ"]].map(([id, t]) => <a key={id} href={`#${id}`} className={active === id ? "on" : ""}>{t}</a>)}<div className="mt">{ctl}</div></nav>
       <div className="tools"><Music /><button className="ghost curbtn" aria-label="Change currency" onClick={() => setCurOpen(true)}>{cur}</button><div className="dt">{ctl}</div>
         <button className="ghost cart" aria-label={`Cart, ${cart.length} items`} onClick={() => setCartOpen(true)}>Cart<i key={cart.length}>{cart.length}</i></button>
@@ -195,9 +195,9 @@ export default function Store({ products, patrons, email, hire }) {
 
     <main id="main">
       <section className="hero"><div className="aurora" aria-hidden="true" /><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="coinwrap" aria-hidden="true"><div className="cshadow" /><div className="bob"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div>{[0, 1, 2].map((k) => <div className="cube" key={k}>{[0, 1, 2, 3, 4, 5].map((f) => <b key={f} />)}</div>)}</div>
-        <div className="wrap"><p className="kicker">Bedrock Edition server store</p>
-          <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>server</em>.</h1>
-          <p className="lead">Ranks, crates and tokens for our Bedrock community.</p>
+        <div className="wrap"><p className="kicker">Welcome to EnderMC</p>
+          <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>End</em>.</h1>
+          <p className="lead">Ranks, crates and tokens for the EnderMC community.</p>
           <div className="row"><a className="btn" href="#store">Start shopping</a>
             <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net : 19132</button></div>
           <dl className="stats"><div><dt>Categories</dt><dd><Count to={CATS.length} /></dd></div><div><dt>Items</dt><dd><Count to={products.length} /></dd></div><div><dt className="live">Online (fake)</dt><dd><Count to={1284} /></dd></div></dl></div></section>
@@ -222,15 +222,15 @@ export default function Store({ products, patrons, email, hire }) {
 
       <div className="bigtype" aria-hidden="true"><div>{[0, 1].map((k) => ["Ranks", "Crates", "Tokens", "Grades", "Perks"].map((t) => <span key={k + t}>{t}</span>))}</div></div>
 
-      <section id="about" className="wrap prose"><h2>About us</h2><p>We are a small community running a Bedrock server. This store is a demo build: names, prices and perks are placeholders.</p></section>
+      <section id="about" className="wrap prose"><h2>About us</h2><p>We are EnderMC, a small community running a Bedrock server. This store is a demo build: names, prices and perks are placeholders.</p></section>
       <section id="faq" className="wrap prose"><h2>FAQ</h2>{FAQ.map(([a, b]) => <details key={a}><summary>{a}</summary><div><p>{b}</p></div></details>)}</section>
     </main>
 
     <footer className="foot"><div className="wrap">
-      <div className="cols"><div><b className="logo">MCPE<span>Store</span></b><p>A demo storefront. Not affiliated with or endorsed by Mojang AB or Microsoft.</p></div>
+      <div className="cols"><div><b className="logo">Ender<span>MC</span></b><p>A demo storefront. Not affiliated with or endorsed by Mojang AB or Microsoft.</p></div>
         <div><h3>Useful links</h3><a href="#main">Home</a><a href="#store">Store</a><a href="/legal/rules">Rules</a><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms & Conditions</a></div>
         <div><h3>Support</h3><a href={`mailto:${email}`}>{email}</a><a href={hire}>Hire the developer</a></div></div>
-      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} MCPE Web Store. All rights reserved.</p></div></footer>
+      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved.</p></div></footer>
 
     {top && <button className="ghost totop" aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" })}>Top</button>}
 

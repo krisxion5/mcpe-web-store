@@ -1,4 +1,4 @@
-# MCPE Web Store (demo)
+# EnderMC Store (demo)
 Next.js 15 + MongoDB. Demo checkout only: no payments are processed.
 
 ## Setup
