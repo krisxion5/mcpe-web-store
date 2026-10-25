@@ -248,7 +248,9 @@ export default function Store({ products, patrons, email, hire }) {
           <div className="row"><a className="btn" href="#store">Start shopping</a>
             <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net : 19132</button></div>
           <dl className="stats"><div><dt>Categories</dt><dd><Count to={CATS.length} /></dd></div><div><dt>Items</dt><dd><Count to={products.length} /></dd></div><div><dt className="live">Online (fake)</dt><dd><Count to={1284} /></dd></div></dl>
-          <div className="vibes" role="group" aria-label="Accent color"><span className="vlab">Pick your vibe</span>{VIBES.map((v) => <button key={v.k} className="vibe" aria-pressed={vibe === v.k} onClick={() => pickVibe(v.k)} style={{ "--a": v.a, "--b": v.b }}><i />{v.n}</button>)}</div></div></section>
+          </div>
+      <div className="rcol"><div className="vcards" role="group" aria-label="Pick your vibe">{VIBES.map((v) => <button key={v.k} className="vcard" aria-pressed={vibe === v.k} onClick={() => pickVibe(v.k)} style={{ "--a": v.a, "--b": v.b }}><span className="vorb" /><b>{v.n}</b><small>Vibe</small></button>)}</div>
+        <h2 className="side"><span className="ol">Legendary</span><br />Ranks</h2></div></section>
 
       <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Tokens", "PixelFox joined Supporter+", "Nova_77 grabbed Builder"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
 
@@ -278,7 +280,7 @@ export default function Store({ products, patrons, email, hire }) {
       <div className="cols"><div><b className="logo">Ender<span>MC</span></b><p>A demo storefront. Not affiliated with or endorsed by Mojang AB or Microsoft.</p></div>
         <div><h3>Useful links</h3><a href="#main">Home</a><a href="#store">Store</a><a href="/legal/rules">Rules</a><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms & Conditions</a></div>
         <div><h3>Support</h3><a href={`mailto:${email}`}>{email}</a><a href={hire}>Hire the developer</a></div></div>
-      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved.</p></div></footer>
+      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved. <span className="ver">build v15</span></p></div></footer>
 
     {top && <button className="ghost totop" aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" })}>Top</button>}
 

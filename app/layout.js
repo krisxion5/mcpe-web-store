@@ -1,4 +1,8 @@
 import "./globals.css";
+import { Galada, Inter, Manrope } from "next/font/google";
+const galada = Galada({ subsets: ["latin"], weight: "400", variable: "--font-galada", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? "https://" + process.env.VERCEL_PROJECT_PRODUCTION_URL : "http://localhost:3000")),
   title: "EnderMC Store", description: "Ranks, crates, cosmetics and tokens for EnderMC, a Minecraft Bedrock server. Demo store.",
@@ -6,5 +10,5 @@ export const metadata = {
 };
 export const viewport = { themeColor: "#0a0a0a" };
 export default function Root({ children }) {
-  return (<html lang="en" data-theme="dark"><body><a className="skip" href="#main">Skip to content</a>{children}</body></html>);
+  return (<html lang="en" data-theme="dark" className={`${galada.variable} ${inter.variable} ${manrope.variable}`}><body><a className="skip" href="#main">Skip to content</a>{children}</body></html>);
 }

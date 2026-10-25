@@ -220,3 +220,26 @@ summary{transition:padding-left .25s var(--ease),color .2s}summary:hover{padding
 @media(min-width:721px){nav{flex:0 0 auto;margin:0 auto;gap:.2rem;padding:.3rem;border-radius:99px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 nav a{border-radius:99px;padding:.4rem 1.1rem;background-image:none}nav a:hover,nav a.on{background:var(--acc);color:var(--ink)}}
 @media(max-width:720px){.fl-fg .fl:nth-child(n+4){display:none}.fl{scale:.7}.vlab{width:100%}}
+/* ---- v15: reference-style hero (script type, centered 3D coin, glass vibe cards) ---- */
+body{font-family:var(--font-inter),"Segoe UI",system-ui,sans-serif}
+h1,h2,.logo,.stats dd,.bigtype span,.steps b{font-family:var(--font-galada),Georgia,cursive;font-weight:400}
+nav a,.demo-bar{font-family:var(--font-manrope),sans-serif}
+h1{font-size:clamp(4.2rem,9.5vw,10rem);line-height:.82;letter-spacing:0}
+h1 span:nth-of-type(-n+2){color:transparent;-webkit-text-stroke:2px var(--fg)}
+.hero{min-height:100vh;min-height:100dvh}.hero .wrap{max-width:none;margin:0;padding-inline:4%;padding-block:8rem 5rem;min-height:inherit}
+.coinwrap{left:50%;right:auto;margin-left:-150px;top:15%;width:300px;height:360px}
+.coin{width:230px;height:230px;margin:0 auto}.coin b{font-size:6.5rem}.cshadow{left:90px;top:300px}
+.rcol{position:absolute;right:4%;top:7rem;bottom:3rem;width:min(40vw,440px);display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;z-index:3;pointer-events:none}
+.vcards{display:flex;gap:1.1rem;padding-top:2.6rem;pointer-events:auto}
+.vcard{position:relative;width:128px;padding:4.4rem .8rem 1rem;border-radius:28px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--fg);font:inherit;text-align:center;cursor:pointer;display:grid;gap:.2rem;transition:background .3s,border-color .3s}
+.vcard b{font-size:.95rem}.vcard small{color:var(--mut);font-size:.7rem}
+.vorb{position:absolute;left:50%;top:-2.6rem;width:92px;height:92px;margin-left:-46px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff 0 6%,var(--a) 8% 40%,var(--b) 75%,#0007 100%);transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+.vcard:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.35)}.vcard:hover .vorb{transform:translateY(-26px) rotate(-12deg) scale(1.15)}.vcard[aria-pressed=true]{border-color:var(--acc)}
+.side{font-size:clamp(3.4rem,6.5vw,7rem);line-height:.82;text-align:right;margin:0;pointer-events:none}.side .ol{color:transparent;-webkit-text-stroke:2px var(--fg)}
+.ver{opacity:.5}
+@media(max-width:1200px){.rcol{width:min(46vw,400px)}}
+@media(max-width:720px){
+  h1{font-size:clamp(3.6rem,17vw,5.5rem);white-space:normal}.hero .wrap{padding-block:6rem 1rem;min-height:0}
+  .coinwrap{left:auto;right:-60px;margin-left:0;top:6%;scale:.6;opacity:.55}
+  .rcol{position:relative;right:auto;top:auto;bottom:auto;width:auto;align-items:flex-start;padding:2.6rem 1rem 2.5rem;gap:2.4rem}.vcards{gap:.8rem}.vcard{width:104px}.vorb{width:72px;height:72px;margin-left:-36px;top:-2rem}.side{text-align:left;font-size:clamp(3rem,15vw,4.6rem)}
+}
