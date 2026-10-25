@@ -1,6 +1,7 @@
 import "./globals.css";
-import { Galada, Inter, Manrope } from "next/font/google";
-const galada = Galada({ subsets: ["latin"], weight: "400", variable: "--font-galada", display: "swap" });
+import { Cormorant_Garamond, Inter, Manrope } from "next/font/google";
+// Elegant display serif. Variable name kept as --font-galada so existing CSS picks it up.
+const galada = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-galada", display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 export const metadata = {

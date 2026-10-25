@@ -22,6 +22,7 @@ const store = wrap(() => localStorage), sess = wrap(() => sessionStorage);
 const FL_BG = [[14, 38, 70, "pearl"], [56, 8, 64, "gem"], [78, 64, 76, "blk"]];
 const FL_FG = [[22, 50, 112, "pearl"], [64, 58, 68, "gem"], [18, 86, 96, "blk"], [76, 40, 88, "pearl"], [8, 70, 58, "gem"], [60, 92, 104, "blk"]];
 const VIBES = [{ k: "solar", n: "Solar", a: "#ffe100", b: "#ff8a00" }, { k: "blaze", n: "Blaze", a: "#ff8a00", b: "#ff3d00" }, { k: "toxic", n: "Toxic", a: "#b6ff00", b: "#00e676" }];
+const Split = ({ t }) => <>{[...t].map((c, i) => <span key={i} className="ch" style={{ "--i": i }}>{c === " " ? "\u00a0" : c}</span>)}</>;
 const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function Count({ to }) {
@@ -117,7 +118,7 @@ export default function Store({ products, patrons, email, hire }) {
     const rest = (c) => { c.style.setProperty("--rx", "0deg"); c.style.setProperty("--ry", "0deg"); };
     const move = (e) => {
       const c = e.target.closest?.(".card,.cat"); if (cur && cur !== c) rest(cur); if (c !== cur) rc = null; cur = c; ev = e; if (!c || raf) return;
-      raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = (rc ||= cur.getBoundingClientRect()), px = ev.clientX - r.left, py = ev.clientY - r.top; cur.style.setProperty("--ry", ((px / r.width - 0.5) * 10).toFixed(2) + "deg"); cur.style.setProperty("--rx", ((0.5 - py / r.height) * 10).toFixed(2) + "deg"); cur.style.setProperty("--mx", px.toFixed(0) + "px"); cur.style.setProperty("--my", py.toFixed(0) + "px"); });
+      raf = requestAnimationFrame(() => { raf = 0; if (!cur) return; const r = (rc ||= cur.getBoundingClientRect()), px = ev.clientX - r.left, py = ev.clientY - r.top; cur.style.setProperty("--ry", ((px / r.width - 0.5) * 4).toFixed(2) + "deg"); cur.style.setProperty("--rx", ((0.5 - py / r.height) * 4).toFixed(2) + "deg"); cur.style.setProperty("--mx", px.toFixed(0) + "px"); cur.style.setProperty("--my", py.toFixed(0) + "px"); });
     };
     const drop = () => { rc = null; };
     document.addEventListener("pointermove", move, { passive: true }); addEventListener("scroll", drop, { passive: true });
@@ -162,11 +163,23 @@ export default function Store({ products, patrons, email, hire }) {
       const out = fls.map((e, i) => { const s = st[i]; return e.animate([{ transform: e.style.transform || "none", opacity: getComputedStyle(e).opacity }, { transform: `translate(${W / 2 - s.cx}px,${H / 2 - s.cy}px) rotate(${s.a + 45}deg) scale(.1)`, opacity: 0 }], { duration: 500, easing: "cubic-bezier(.55,.06,.68,.19)", fill: "forwards" }).finished; });
       Promise.all(out).then(() => { document.documentElement.dataset.vibe = key; return new Promise((r) => setTimeout(r, 300)); }).then(() => Promise.all(fls.map((e, i) => {
         const s = st[i]; s.bx = (Math.random() - 0.5) * 140; s.by = (Math.random() - 0.5) * 140; s.rx = 0; s.ry = 0; s.a += 90;
-        return e.animate([{ transform: `translate(${W / 2 - s.cx}px,${H / 2 - s.cy}px) rotate(${s.a - 45}deg) scale(.1)`, opacity: 0 }, { transform: `translate(${s.bx}px,${s.by}px) rotate(${s.a}deg) scale(1)`, opacity: 1 }], { duration: 900, easing: "cubic-bezier(.34,1.45,.64,1)", fill: "forwards" }).finished;
+        return e.animate([{ transform: `translate(${W / 2 - s.cx}px,${H / 2 - s.cy}px) rotate(${s.a - 45}deg) scale(.1)`, opacity: 0 }, { transform: `translate(${s.bx}px,${s.by}px) rotate(${s.a}deg) scale(1)`, opacity: 1 }], { duration: 900, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" }).finished;
       }))).then(() => { fls.forEach((e) => e.getAnimations().forEach((x) => x.cancel())); busy = false; }).catch(() => { busy = false; });
     };
     stageApi.current = { switchTo };
     return () => { cancelAnimationFrame(raf); clearTimeout(t0); removeEventListener("resize", measure); document.removeEventListener("pointermove", mv); io.disconnect(); };
+  }, []);
+  useEffect(() => { // magnetic CTA + hero spotlight (hover devices only; one element each)
+    if (!matchMedia("(hover:hover) and (pointer:fine)").matches || calm()) return;
+    const spot = document.querySelector(".spot"), hero = document.querySelector(".hero");
+    let tx = 0, ty = 0, sx = 0, sy = 0, raf = 0, mag = null;
+    const tick = () => { raf = 0; sx += (tx - sx) * 0.12; sy += (ty - sy) * 0.12; if (spot) spot.style.transform = `translate3d(${sx - 300}px,${sy - 300}px,0)`; if (Math.abs(tx - sx) + Math.abs(ty - sy) > 0.5) raf = requestAnimationFrame(tick); };
+    const mv = (e) => {
+      if (hero && spot) { const r = hero.getBoundingClientRect(); if (e.clientY >= r.top && e.clientY <= r.bottom) { tx = e.clientX - r.left; ty = e.clientY - r.top; if (!raf) raf = requestAnimationFrame(tick); } }
+      const m = e.target.closest?.("[data-mag]"); if (mag && mag !== m) mag.style.transform = ""; mag = m || null;
+      if (m) { const b = m.getBoundingClientRect(); m.style.transform = `translate(${(e.clientX - b.left - b.width / 2) * 0.25}px,${(e.clientY - b.top - b.height / 2) * 0.35}px)`; }
+    };
+    document.addEventListener("pointermove", mv, { passive: true }); return () => { document.removeEventListener("pointermove", mv); cancelAnimationFrame(raf); };
   }, []);
   useEffect(() => { // neon cursor: instant dot + smoothly trailing ring (transform only; loop sleeps when settled)
     if (!matchMedia("(hover:hover) and (pointer:fine)").matches || calm()) return;
@@ -217,14 +230,14 @@ export default function Store({ products, patrons, email, hire }) {
   const openCheckout = () => { if (!ign) return setIgnOpen(true); setCartOpen(false); setConfirm(""); setCErr(""); setStep("check"); };
   const place = () => {
     if (confirm.trim().toLowerCase() !== ign.toLowerCase()) return setCErr(`That doesn't match your saved IGN (${ign}). Checkout blocked.`);
-    setPlacing(true); setTimeout(() => { setPlacing(false); setStep("demo"); saveCart([]); burst(); sfx("ok"); toast("This is a demo project. Hire me to build the full version."); }, 900);
+    setPlacing(true); setTimeout(() => { setPlacing(false); setStep("demo"); saveCart([]); sfx("ok"); toast("This is a demo project. Hire me to build the full version."); }, 900);
   };
   const submitAuth = async (e) => { e.preventDefault(); const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: auth, ...form }) }); const d = await r.json().catch(() => ({})); if (r.ok) { toast(auth === "register" ? "Account created" : "Signed in"); setAuth(null); loadUser(); } else toast(d.error || "Something went wrong.", "err"); };
   const logout = async () => { await fetch("/api/auth", { method: "DELETE" }).catch(() => {}); setUser(null); toast("Logged out"); };
   const list0 = products.filter((p) => (cat === "All" || p.category === cat) && (p.name + p.description).toLowerCase().includes(dq.toLowerCase()));
   const list = sort === "feat" ? list0 : [...list0].sort((a, b) => (sort === "lo" ? a.price - b.price : b.price - a.price));
   const featured = products.filter((p) => p.badge === "Popular").slice(0, 3);
-  const W = (t, d) => <span style={{ "--d": d }}>{t} </span>;
+  const W = (t, d) => <span className="mk"><span style={{ "--d": d }}>{t}</span></span>;
   const ctl = (<><button className="ghost" onClick={() => setIgnOpen(true)}>{ign || "Set IGN"}</button>
     <button className="ghost" aria-label="Toggle theme" onClick={flip}>{theme === "dark" ? "Light" : "Dark"}</button>
     {user?.role === "ADMIN" && <a className="ghost" href="/admin">Admin</a>}
@@ -241,27 +254,27 @@ export default function Store({ products, patrons, email, hire }) {
         <button className="ghost menu" aria-expanded={menu} aria-label="Menu" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div></div></header>
 
     <main id="main">
-      <section className="hero"><div className="aurora" aria-hidden="true" /><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="stage" aria-hidden="true"><div className="fl-bg">{FL_BG.map(([y, x, z, t], i) => <span key={i} className={`fl ${t}`} style={{ top: `${y}%`, left: `${x}%`, "--sz": `${z}px` }} />)}</div><div className="coinwrap"><div className="cshadow" /><div className="bob"><div className="tilt"><div className="flip"><div className="coin"><i /><i /><i /><i /><i /><b className="f">T</b><b className="bk">T</b></div></div></div></div></div><div className="fl-fg">{FL_FG.map(([y, x, z, t], i) => <span key={i} className={`fl ${t}`} style={{ top: `${y}%`, left: `${x}%`, "--sz": `${z}px` }} />)}</div></div>
+      <section className="hero"><div className="aurora" aria-hidden="true" /><div className="rain" aria-hidden="true">{Array.from({ length: 8 }, (_, k) => <i key={k} style={{ "--x": `${6 + k * 12}%`, "--t": `${9 + (k % 4) * 3}s`, "--d": `-${k * 1.3}s` }} />)}</div><div className="stage" aria-hidden="true"><div className="spot" /><div className="fl-bg">{FL_BG.map(([y, x, z, t], i) => <span key={i} className={`fl ${t}`} style={{ top: `${y}%`, left: `${x}%`, "--sz": `${z}px` }} />)}</div><div className="coinwrap"><svg className="ring" viewBox="0 0 200 200"><defs><path id="rp" d="M100,100 m-80,0 a80,80 0 1,1 160,0 a80,80 0 1,1 -160,0" /></defs><text><textPath href="#rp">ENDERMC • BEDROCK • OFFICIAL STORE • DEMO • </textPath></text></svg><div className="cshadow" /><div className="bob"><div className="tilt"><div className="flip"><div className="coin"><i /><i /><i /><i /><i /><b className="f">E</b><b className="bk">E</b></div></div></div></div></div><div className="fl-fg">{FL_FG.map(([y, x, z, t], i) => <span key={i} className={`fl ${t}`} style={{ top: `${y}%`, left: `${x}%`, "--sz": `${z}px` }} />)}</div></div>
         <div className="wrap"><p className="kicker">Welcome to EnderMC</p>
-          <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<em style={{ "--d": 4 }}>End</em>.</h1>
+          <h1>{W("Gear", 0)}{W("up.", 1)}<br />{W("Rule", 2)}{W("the", 3)}<span className="mk"><em style={{ "--d": 4 }}>End</em></span>.</h1>
           <p className="lead">Ranks, crates and tokens for the EnderMC community.</p>
-          <div className="row"><a className="btn" href="#store">Start shopping</a>
+          <div className="row"><a className="btn" data-mag href="#store">Start shopping</a>
             <button className="ghost" onClick={() => navigator.clipboard?.writeText("play.example.net").then(() => toast("Server address copied"))}>play.example.net : 19132</button></div>
           <dl className="stats"><div><dt>Categories</dt><dd><Count to={CATS.length} /></dd></div><div><dt>Items</dt><dd><Count to={products.length} /></dd></div><div><dt className="live">Online (fake)</dt><dd><Count to={1284} /></dd></div></dl>
           </div>
       <div className="rcol"><div className="vcards" role="group" aria-label="Pick your vibe">{VIBES.map((v) => <button key={v.k} className="vcard" aria-pressed={vibe === v.k} onClick={() => pickVibe(v.k)} style={{ "--a": v.a, "--b": v.b }}><span className="vorb" /><b>{v.n}</b><small>Vibe</small></button>)}</div>
-        <h2 className="side"><span className="ol">Legendary</span><br />Ranks</h2></div></section>
+        <h2 className="side"><span className="ol">Legendary</span><br />Ranks</h2></div><a className="cue" href="#join" aria-label="Scroll to content"><i /></a></section>
 
       <div className="ticker" aria-hidden="true"><div>{[0, 1].map((k) => ["Fake demo data:", "DemoSteve unlocked Legend", "Luna_X opened a Mythic Crate", "BlockBob got 1200 Tokens", "PixelFox joined Supporter+", "Nova_77 grabbed Builder"].map((t) => <span key={k + t}><b>●</b> {t}</span>))}</div></div>
 
-      <section className="wrap"><h2>Shop by category</h2>
+      <section className="wrap"><h2 aria-label="Shop by category"><span aria-hidden="true"><Split t="Shop by category" /></span></h2>
         <div className="cats">{CATS.map((c, i) => <button key={c} aria-pressed={cat === c} className="cat" onClick={() => { setCat(cat === c ? "All" : c); document.getElementById("store")?.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); }}><Ico c={c} /><b>{c}</b><small>{products.filter((p) => p.category === c).length} items</small></button>)}</div></section>
 
-      <section id="join" className="wrap"><h2>How to join</h2><ol className="steps">{[["Open Minecraft", "Launch Bedrock Edition and go to Play, then Servers."], ["Add the server", "Tap Add Server. Address play.example.net, port 19132."], ["Hop in", "Save, join, and grab your rank with the same gamertag."]].map(([t, d], i) => <li key={t}><b>0{i + 1}</b><h3>{t}</h3><p>{d}</p></li>)}</ol></section>
+      <section id="join" className="wrap"><h2 aria-label="How to join"><span aria-hidden="true"><Split t="How to join" /></span></h2><ol className="steps">{[["Open Minecraft", "Launch Bedrock Edition and go to Play, then Servers."], ["Add the server", "Tap Add Server. Address play.example.net, port 19132."], ["Hop in", "Save, join, and grab your rank with the same gamertag."]].map(([t, d], i) => <li key={t}><b>0{i + 1}</b><h3>{t}</h3><p>{d}</p></li>)}</ol></section>
 
-      <section className="wrap"><h2>Popular right now</h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
+      <section className="wrap"><h2 aria-label="Popular right now"><span aria-hidden="true"><Split t="Popular right now" /></span></h2>{featured.length ? <ul className="grid">{featured.map((p, i) => <Card key={p.id} p={p} i={i} price={fmt(p.price)} inCart={cart.includes(p.id)} add={onAdd} />)}</ul> : <p className="empty">Nothing featured right now.</p>}</section>
 
-      <section id="patrons" className="wrap"><h2>Patrons</h2>
+      <section id="patrons" className="wrap"><h2 aria-label="Patrons"><span aria-hidden="true"><Split t="Patrons" /></span></h2>
         {patrons.length ? <ul className="patrons">{patrons.map((p) => <li key={p.name}><b>{p.name}</b><span>{p.tier}</span></li>)}</ul> : <p className="empty">No patrons yet. Be the first name here.</p>}</section>
 
       <section id="store" className="wrap"><h2>Store{cat !== "All" && <span className="sub"> / {cat}</span>}</h2>
@@ -272,15 +285,16 @@ export default function Store({ products, patrons, email, hire }) {
 
       <div className="bigtype" aria-hidden="true"><div>{[0, 1].map((k) => ["Ranks", "Crates", "Tokens", "Grades", "Perks"].map((t) => <span key={k + t}>{t}</span>))}</div></div>
 
-      <section id="about" className="wrap prose"><h2>About us</h2><p>We are EnderMC, a small community running a Bedrock server. This store is a demo build: names, prices and perks are placeholders.</p></section>
-      <section id="faq" className="wrap prose"><h2>FAQ</h2>{FAQ.map(([a, b]) => <details key={a}><summary>{a}</summary><div><p>{b}</p></div></details>)}</section>
+      <section id="about" className="wrap prose"><h2 aria-label="About us"><span aria-hidden="true"><Split t="About us" /></span></h2><p>We are EnderMC, a small community running a Bedrock server. This store is a demo build: names, prices and perks are placeholders.</p></section>
+      <section id="faq" className="wrap prose"><h2 aria-label="FAQ"><span aria-hidden="true"><Split t="FAQ" /></span></h2>{FAQ.map(([a, b]) => <details key={a}><summary>{a}</summary><div><p>{b}</p></div></details>)}</section>
     </main>
 
     <footer className="foot"><div className="wrap">
       <div className="cols"><div><b className="logo">Ender<span>MC</span></b><p>A demo storefront. Not affiliated with or endorsed by Mojang AB or Microsoft.</p></div>
         <div><h3>Useful links</h3><a href="#main">Home</a><a href="#store">Store</a><a href="/legal/rules">Rules</a><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms & Conditions</a></div>
         <div><h3>Support</h3><a href={`mailto:${email}`}>{email}</a><a href={hire}>Hire the developer</a></div></div>
-      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved. <span className="ver">build v15</span></p></div></footer>
+      <div className="mega" aria-hidden="true">EnderMC</div>
+      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved. <span className="ver">build v18</span></p></div></footer>
 
     {top && <button className="ghost totop" aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" })}>Top</button>}
 
