@@ -330,3 +330,29 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:4;bac
 /* cards animate with scroll position (runs off the main thread) */
 @supports(animation-timeline:view()){.card{animation:cardin linear both;animation-timeline:view();animation-range:entry 0% entry 42%;animation-delay:0s}}
 @media(prefers-reduced-motion:reduce){.mk>span,.mk>em{animation:none}}
+/* ---- v19: luxury (Bodoni Moda + Jost, gold hairlines, restrained accent) ---- */
+:root{--font-manrope:var(--font-inter);--bg:#070707;--fg:#f1ece0;--mut:#9b9487;--line:#25231f;--acc:#ffd84a;--acc2:#e0a100}
+body{font-size:16.5px;letter-spacing:.005em;font-weight:300}
+h1,h2,h3,.logo,.stats dd,.bigtype span,.steps b,.card h3,.buy b,.side,.cat b,.mega{font-weight:400}
+h1{font-size:clamp(3.4rem,7.6vw,8.2rem);line-height:.95;letter-spacing:-.025em}.side{font-size:clamp(3rem,5.6vw,6.2rem)}.wrap>h2{font-size:clamp(2.2rem,3.8vw,3.2rem);letter-spacing:-.015em}
+.logo{font-style:italic;font-size:1.6rem}.card h3{font-size:1.5rem;letter-spacing:-.005em}.buy b{font-size:1.5rem;font-weight:400}
+.kicker,.tag,.stats dt,.vlab,.cols h3,.demo-bar,nav a,.btn,.ghost,.chip,.badge{font-family:var(--font-inter),sans-serif;font-weight:500}
+.kicker,.vlab,.stats dt,.cols h3{letter-spacing:.3em}.tag{letter-spacing:.24em}.lead,.card p,.prose p,.steps p,.cols a,summary{font-weight:300}
+.demo-bar{background:#000;color:var(--mut);border-bottom:1px solid var(--line);letter-spacing:.16em;font-size:.66rem;text-transform:uppercase}.demo-bar a{color:var(--acc);text-decoration:none;border-bottom:1px solid var(--acc)}
+/* gold hairline buttons with a sweeping fill */
+.btn{background:linear-gradient(var(--acc),var(--acc)) 0 0/0 100% no-repeat;color:var(--acc);border:1px solid var(--acc);transition:background-size .55s var(--ease),color .4s,transform .2s}
+.btn:hover:not(:disabled){background:linear-gradient(var(--acc),var(--acc)) 0 0/100% 100% no-repeat;color:var(--ink);transform:none}.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.35}.cart i{background:var(--acc);color:var(--ink)}.chip[aria-pressed=true]{background:none;color:var(--acc);border-color:var(--acc)}
+.ghost,.chip{border-color:rgba(241,236,224,.18)}.ghost:hover,.chip:hover{border-color:var(--acc);color:var(--acc)}
+.card,.cat,.steps li{border-color:rgba(241,236,224,.09);background:#0d0d0c}.card:hover,.cat:hover,.steps li:hover{border-color:rgba(255,216,74,.55)}
+.card .top{background:radial-gradient(circle at 28% 55%,rgba(255,216,74,.07),transparent 65%)}.ico *{stroke-width:1.2}
+.card::before{-webkit-text-stroke:1px rgba(241,236,224,.08)}
+.wrap>h2::before{color:var(--acc)}.wrap>h2::after{background:linear-gradient(90deg,rgba(255,216,74,.45),var(--line) 40%)}
+h1 span:nth-of-type(-n+2),.side .ol{color:var(--mut)}h1 em{color:var(--acc)}
+.coin b{color:#0008}.head{background:rgba(7,7,7,.88);border-bottom-color:rgba(241,236,224,.07)}
+.modal{background:#0d0d0c;border:1px solid rgba(241,236,224,.1);border-top:1px solid var(--acc)}.vcard{background:rgba(241,236,224,.03);border-color:rgba(241,236,224,.1)}
+.hero .wrap::before,.kicker{color:var(--mut)}.kicker::before{background:var(--acc)}
+.mega{font-style:italic;-webkit-text-stroke:1px rgba(241,236,224,.1)}.foot{border-top-color:rgba(241,236,224,.08)}
+[data-theme=light]{--bg:#f6f2ea;--fg:#17150f;--mut:#6f6959;--line:#e2dccd;--acc:#a97a00;--acc2:#7a5600;--ink:#fff}
+[data-theme=light] .demo-bar{background:#fff}[data-theme=light] .card,[data-theme=light] .cat,[data-theme=light] .steps li,[data-theme=light] .modal{background:#fff}
+[data-theme=light] .head{background:rgba(246,242,234,.9)}

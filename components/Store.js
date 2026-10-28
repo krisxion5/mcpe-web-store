@@ -294,7 +294,7 @@ export default function Store({ products, patrons, email, hire }) {
         <div><h3>Useful links</h3><a href="#main">Home</a><a href="#store">Store</a><a href="/legal/rules">Rules</a><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms & Conditions</a></div>
         <div><h3>Support</h3><a href={`mailto:${email}`}>{email}</a><a href={hire}>Hire the developer</a></div></div>
       <div className="mega" aria-hidden="true">EnderMC</div>
-      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved. <span className="ver">build v18</span></p></div></footer>
+      <p className="copy" suppressHydrationWarning>© 2025 - {new Date().getFullYear()} EnderMC. All rights reserved. <span className="ver">build v19</span></p></div></footer>
 
     {top && <button className="ghost totop" aria-label="Back to top" onClick={() => scrollTo({ top: 0, behavior: calm() ? "auto" : "smooth" })}>Top</button>}
 
